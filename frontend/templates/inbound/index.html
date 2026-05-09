@@ -3,63 +3,89 @@
 {% block page_title %}② 롤 원단 입고{% endblock %}
 {% block content %}
 <div class="space-y-4">
+
     <div class="flex flex-col sm:flex-row gap-3 justify-between">
-        <form method="get" class="flex gap-2">
-            <input type="text" name="q" value="{{ q }}" placeholder="인쇄업체, 롤번호 검색..." class="search-input flex-1 sm:w-64">
-            <button type="submit" class="btn-primary px-4 py-2 rounded-lg text-sm">검색</button>
-            {% if q %}<a href="/inbound" class="btn-secondary px-4 py-2 rounded-lg text-sm">초기화</a>{% endif %}
+        <form method="get" class="flex gap-2 flex-1">
+            <div class="relative flex-1 sm:max-w-xs">
+                <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="text" name="q" value="{{ q }}" placeholder="인쇄업체, 롤번호 검색..."
+                    class="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+            </div>
+            <button type="submit" class="btn-inbound px-4 py-2.5 text-sm">검색</button>
+            {% if q %}<a href="/inbound" class="btn-secondary px-4 py-2.5 text-sm">초기화</a>{% endif %}
         </form>
-        <a href="/inbound/new" class="btn-inbound px-4 py-2 rounded-lg text-sm text-center">+ 입고 등록</a>
+        <a href="/inbound/new" class="btn-inbound px-5 py-2.5 text-sm text-center font-semibold">+ 입고 등록</a>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>입고일</th>
-                    <th>인쇄업체</th>
-                    <th>롤번호</th>
-                    <th>연결 주문 ID</th>
-                    <th>담당자</th>
-                    <th>상태</th>
-                    <th>메모</th>
-                    <th>관리</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in items %}
-                <tr>
-                    <td>{{ item.inbound_date }}</td>
-                    <td class="font-medium">{{ item.vendor }}</td>
-                    <td class="font-mono text-sm">{{ item.roll_no }}</td>
-                    <td class="text-xs text-gray-500 max-w-xs truncate">{{ item.order_ids }}</td>
-                    <td>{{ item.manager }}</td>
-                    <td><span class="badge-blue">{{ item.status }}</span></td>
-                    <td class="text-gray-500 text-sm">{{ item.memo }}</td>
-                    <td>
-                        <div class="flex gap-2">
-                            <a href="/inbound/{{ item.inbound_id }}/edit" class="text-blue-600 hover:underline text-sm">수정</a>
-                            <form method="post" action="/inbound/{{ item.inbound_id }}/delete" onsubmit="return confirm('삭제하시겠습니까?')">
-                                <button type="submit" class="text-red-500 hover:underline text-sm">삭제</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                {% else %}
-                <tr><td colspan="8" class="text-center text-gray-400 py-8">등록된 입고 내역이 없습니다.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50 border-b border-gray-100">
+                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">입고일</th>
+                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">인쇄업체</th>
+                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">롤번호</th>
+                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">연결 주문</th>
+                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">담당자</th>
+                        <th class="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">상태</th>
+                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">메모</th>
+                        <th class="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">관리</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    {% for item in items %}
+                    <tr class="hover:bg-blue-50/30 transition-colors">
+                        <td class="px-5 py-4 text-gray-500 whitespace-nowrap">{{ item.inbound_date }}</td>
+                        <td class="px-5 py-4 font-semibold text-gray-800">{{ item.vendor }}</td>
+                        <td class="px-5 py-4">
+                            <span class="font-mono text-sm bg-gray-50 px-2 py-1 rounded-lg text-gray-700">{{ item.roll_no }}</span>
+                        </td>
+                        <td class="px-5 py-4 text-xs text-gray-400 max-w-xs truncate" title="{{ item.order_ids }}">
+                            {{ item.order_ids if item.order_ids else '-' }}
+                        </td>
+                        <td class="px-5 py-4 text-gray-600">{{ item.manager }}</td>
+                        <td class="px-5 py-4 text-center"><span class="badge-blue">{{ item.status }}</span></td>
+                        <td class="px-5 py-4 text-gray-400 text-xs max-w-xs truncate">{{ item.memo }}</td>
+                        <td class="px-5 py-4">
+                            <div class="flex items-center justify-center gap-2">
+                                <a href="/inbound/{{ item.inbound_id }}/edit"
+                                    class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">수정</a>
+                                <form method="post" action="/inbound/{{ item.inbound_id }}/delete"
+                                    onsubmit="return confirm('삭제하시겠습니까?')">
+                                    <button type="submit"
+                                        class="px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">삭제</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="px-5 py-12 text-center text-gray-400">
+                            <div class="text-4xl mb-2">📦</div>
+                            <div>등록된 입고 내역이 없습니다.</div>
+                            <a href="/inbound/new" class="mt-2 inline-block text-blue-500 hover:underline text-sm">입고 등록하기</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    {% if total_pages > 1 %}
-    <div class="flex justify-center gap-2">
-        {% for p in range(1, total_pages + 1) %}
-        <a href="?page={{ p }}{% if q %}&q={{ q }}{% endif %}"
-            class="px-3 py-1 rounded-lg text-sm {% if p == page %}bg-blue-600 text-white{% else %}bg-white border text-gray-600 hover:bg-gray-50{% endif %}">{{ p }}</a>
-        {% endfor %}
+    <div class="flex items-center justify-between">
+        <div class="text-sm text-gray-400">총 <span class="font-semibold text-gray-700">{{ total }}</span>건</div>
+        {% if total_pages > 1 %}
+        <div class="flex gap-1.5">
+            {% for p in range(1, total_pages + 1) %}
+            <a href="?page={{ p }}{% if q %}&q={{ q }}{% endif %}"
+                class="w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium
+                    {% if p == page %}bg-blue-500 text-white{% else %}bg-white border border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">{{ p }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
-    <div class="text-sm text-gray-500 text-right">총 {{ total }}건</div>
+
 </div>
 {% endblock %}
