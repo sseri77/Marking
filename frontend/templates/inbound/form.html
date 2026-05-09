@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{% if action == 'create' %}입고 등록{% else %}입고 수정{% endif %}{% endblock %}
+{% block page_title %}{% if action == 'create' %}원재료 입고 등록{% else %}입고 수정{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        {% if error %}<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{{ error }}</div>{% endif %}
+        <form action="/inbound/{% if action == 'edit' %}{{ item.inbound_id }}/edit{% else %}new{% endif %}" method="post" class="space-y-5">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="form-group">
+                    <label class="form-label">입고일 <span class="text-red-500">*</span></label>
+                    <input type="date" name="date" required value="{{ item.date if item else today }}" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">거래처 <span class="text-red-500">*</span></label>
+                    <input type="text" name="vendor" required value="{{ item.vendor if item else '' }}" class="form-input" placeholder="거래처명" list="vendor-list">
+                    <datalist id="vendor-list">
+                        {% for v in vendors %}<option value="{{ v.vendor_name }}">{% endfor %}
+                    </datalist>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="form-group">
+                    <label class="form-label">원재료명 <span class="text-red-500">*</span></label>
+                    <input type="text" name="material_name" required value="{{ item.material_name if item else '' }}" class="form-input" placeholder="예: 폴리에스터">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">규격</label>
+                    <input type="text" name="spec" value="{{ item.spec if item else '' }}" class="form-input" placeholder="예: 150cm/white">
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-4">
+                <div class="form-group col-span-2">
+                    <label class="form-label">LOT번호 <span class="text-red-500">*</span></label>
+                    <input type="text" name="lot_no" required value="{{ item.lot_no if item else '' }}" class="form-input" placeholder="예: LOT-240501">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">단위</label>
+                    <select name="unit" class="form-select">
+                        {% for u in ['m', 'kg', 'ea', 'roll', 'yard'] %}
+                        <option value="{{ u }}" {% if item and item.unit == u %}selected{% elif not item and u == 'm' %}selected{% endif %}>{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="form-group">
+                    <label class="form-label">수량 <span class="text-red-500">*</span></label>
+                    <input type="number" name="qty" required min="1" value="{{ item.qty if item else '' }}" class="form-input" placeholder="0" inputmode="numeric">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">담당자 <span class="text-red-500">*</span></label>
+                    <input type="text" name="manager" required value="{{ item.manager if item else '' }}" class="form-input" placeholder="담당자명">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">메모</label>
+                <textarea name="memo" rows="2" class="form-input" placeholder="메모 입력">{{ item.memo if item else '' }}</textarea>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="btn-inbound flex-1">{% if action == 'create' %}입고 등록{% else %}저장{% endif %}</button>
+                <a href="/inbound" class="btn-secondary flex-1 text-center">취소</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

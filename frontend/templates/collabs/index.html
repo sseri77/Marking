@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}콜라보 관리{% endblock %}
+{% block page_title %}콜라보 관리{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <form action="/collabs" method="get" class="flex gap-2">
+            <div class="relative flex-1 sm:w-72">
+                <input type="text" name="q" value="{{ q }}" placeholder="콜라보명 검색..." class="search-input">
+                <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <button type="submit" class="btn-secondary">검색</button>
+        </form>
+        <a href="/collabs/new" class="btn-primary flex items-center gap-2 justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            콜라보 등록
+        </a>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100">
+            <span class="font-medium text-gray-700">전체 {{ total }}개</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>콜라보 ID</th>
+                        <th>구단</th>
+                        <th>콜라보명</th>
+                        <th>상태</th>
+                        <th>등록일</th>
+                        <th class="text-right">관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in items %}
+                    <tr>
+                        <td class="text-gray-400 text-xs font-mono">{{ c.collab_id }}</td>
+                        <td class="text-gray-600 text-sm">{{ c.club_id }}</td>
+                        <td class="font-medium text-gray-800">{{ c.collab_name }}</td>
+                        <td><span class="badge {% if c.status == '활성' %}badge-green{% else %}badge-gray{% endif %}">{{ c.status }}</span></td>
+                        <td class="text-gray-500 text-sm">{{ c.created_at[:10] if c.created_at else '' }}</td>
+                        <td class="text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <a href="/collabs/{{ c.collab_id }}/edit" class="btn-sm-secondary">수정</a>
+                                <form action="/collabs/{{ c.collab_id }}/delete" method="post" onsubmit="return confirm('삭제하시겠습니까?')">
+                                    <button type="submit" class="btn-sm-danger">삭제</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center py-10 text-gray-400">등록된 콜라보가 없습니다.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include "partials/pagination.html" %}
+    </div>
+</div>
+{% endblock %}
