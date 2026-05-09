@@ -62,28 +62,27 @@ class SheetsService:
             if settings.GOOGLE_SERVICE_ACCOUNT_JSON:
                 sa_info = json.loads(settings.GOOGLE_SERVICE_ACCOUNT_JSON)
                 print("[Sheets] Using GOOGLE_SERVICE_ACCOUNT_JSON env var")
-            elif settings.client_email:
-                raw_key = settings.private_key
-                # \n이 이스케이프된 경우 실제 줄바꿈으로 변환
+            elif os.environ.get("client_email"):
+                # pydantic 파싱 오류 방지를 위해 os.environ에서 직접 읽기
+                raw_key = os.environ.get("private_key", "")
                 if "\\n" in raw_key:
                     raw_key = raw_key.replace("\\n", "\n")
-                # PEM 헤더/푸터가 없으면 추가
                 if "-----BEGIN" not in raw_key:
                     raw_key = "-----BEGIN RSA PRIVATE KEY-----\n" + raw_key + "\n-----END RSA PRIVATE KEY-----\n"
                 sa_info = {
-                    "type": settings.type or "service_account",
-                    "project_id": settings.project_id,
-                    "private_key_id": settings.private_key_id,
+                    "type": str(os.environ.get("type", "service_account")),
+                    "project_id": str(os.environ.get("project_id", "")),
+                    "private_key_id": str(os.environ.get("private_key_id", "")),
                     "private_key": raw_key,
-                    "client_email": settings.client_email,
-                    "client_id": settings.client_id,
-                    "auth_uri": settings.auth_uri or "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": settings.token_uri or "https://oauth2.googleapis.com/token",
-                    "auth_provider_x509_cert_url": settings.auth_provider_x509_cert_url or "https://www.googleapis.com/oauth2/v1/certs",
-                    "client_x509_cert_url": settings.client_x509_cert_url,
-                    "universe_domain": settings.universe_domain or "googleapis.com",
+                    "client_email": str(os.environ.get("client_email", "")),
+                    "client_id": str(os.environ.get("client_id", "")),
+                    "auth_uri": str(os.environ.get("auth_uri", "https://accounts.google.com/o/oauth2/auth")),
+                    "token_uri": str(os.environ.get("token_uri", "https://oauth2.googleapis.com/token")),
+                    "auth_provider_x509_cert_url": str(os.environ.get("auth_provider_x509_cert_url", "https://www.googleapis.com/oauth2/v1/certs")),
+                    "client_x509_cert_url": str(os.environ.get("client_x509_cert_url", "")),
+                    "universe_domain": str(os.environ.get("universe_domain", "googleapis.com")),
                 }
-                print(f"[Sheets] Using individual env vars, client_email: {settings.client_email}")
+                print(f"[Sheets] Using individual env vars, client_email: {os.environ.get('client_email')}")
                 print(f"[Sheets] private_key starts with: {raw_key[:40]}")
             else:
                 cred_file = settings.GOOGLE_SERVICE_ACCOUNT_FILE
