@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}통합 검색{% endblock %}
+{% block page_title %}통합 검색{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- 검색 폼 -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <form action="/search" method="get" class="space-y-4">
+            <div class="relative">
+                <input type="text" name="q" value="{{ q }}" placeholder="구단명, 선수명, 등번호, LOT번호, 매장명 등..." autofocus
+                    class="w-full pl-12 pr-4 py-4 text-lg border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <svg class="absolute left-4 top-4 w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                {% for t, label in [('all','전체'), ('club','구단'), ('collab','콜라보'), ('player','선수'), ('inbound','입고'), ('outbound','출고')] %}
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="radio" name="type" value="{{ t }}" class="sr-only" {% if type == t %}checked{% endif %} onchange="this.form.submit()">
+                    <span class="px-3 py-1.5 text-sm rounded-full border cursor-pointer {% if type == t %}bg-blue-600 text-white border-blue-600{% else %}bg-white text-gray-600 border-gray-200 hover:bg-gray-50{% endif %}">
+                        {{ label }}
+                    </span>
+                </label>
+                {% endfor %}
+                <button type="submit" class="btn-primary px-6">검색</button>
+            </div>
+        </form>
+    </div>
+
+    {% if q %}
+    <!-- 검색 결과 헤더 -->
+    <div class="flex items-center gap-3">
+        <span class="text-gray-700">"<strong>{{ q }}</strong>" 검색 결과</span>
+        <span class="bg-blue-100 text-blue-700 text-sm font-semibold px-2.5 py-0.5 rounded-full">총 {{ total }}건</span>
+    </div>
+
+    {% if total == 0 %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+        <svg class="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <p class="text-gray-500">검색 결과가 없습니다.</p>
+        <p class="text-sm text-gray-400 mt-1">다른 검색어를 입력해 보세요.</p>
+    </div>
+    {% endif %}
+
+    <!-- 구단 결과 -->
+    {% if results.clubs %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+            <span class="font-semibold text-gray-800">구단</span>
+            <span class="bg-gray-100 text-gray-600 text-xs font-medium px-2 py-0.5 rounded-full">{{ results.clubs|length }}건</span>
+        </div>
+        <div class="divide-y divide-gray-50">
+            {% for item in results.clubs %}
+            <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50">
+                <div>
+                    <span class="font-medium text-gray-800">{{ item.club_name }}</span>
+                    <span class="text-xs text-gray-400 ml-2">{{ item.club_id }}</span>
+                </div>
+                <span class="badge {% if item.status == '활성' %}badge-green{% else %}badge-gray{% endif %}">{{ item.status }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 콜라보 결과 -->
+    {% if results.collabs %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+            <span class="font-semibold text-gray-800">콜라보</span>
+            <span class="bg-gray-100 text-gray-600 text-xs font-medium px-2 py-0.5 rounded-full">{{ results.collabs|length }}건</span>
+        </div>
+        <div class="divide-y divide-gray-50">
+            {% for item in results.collabs %}
+            <div class="px-5 py-3 hover:bg-gray-50">
+                <div class="font-medium text-gray-800">{{ item.collab_name }}</div>
+                <div class="text-xs text-gray-500 mt-0.5">{{ item.club_id }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 선수 결과 -->
+    {% if results.players %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+            <span class="font-semibold text-gray-800">선수</span>
+            <span class="bg-gray-100 text-gray-600 text-xs font-medium px-2 py-0.5 rounded-full">{{ results.players|length }}건</span>
+        </div>
+        <div class="divide-y divide-gray-50">
+            {% for item in results.players %}
+            <div class="px-5 py-3 flex items-center gap-4 hover:bg-gray-50">
+                <div class="w-9 h-9 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    {{ item.player_number }}
+                </div>
+                <div>
+                    <div class="font-medium text-gray-800">{{ item.player_name }}</div>
+                    <div class="text-xs text-gray-500">{{ item.club_name }} · {{ item.collab_name }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 입고 결과 -->
+    {% if results.inbound %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+            <span class="font-semibold text-gray-800">입고</span>
+            <span class="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-full">{{ results.inbound|length }}건</span>
+        </div>
+        <div class="divide-y divide-gray-50">
+            {% for item in results.inbound %}
+            <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50">
+                <div>
+                    <div class="font-medium text-gray-800">{{ item.material_name }} <span class="text-xs font-mono text-blue-600 ml-2">{{ item.lot_no }}</span></div>
+                    <div class="text-xs text-gray-500">{{ item.vendor }} · {{ item.date }}</div>
+                </div>
+                <span class="font-semibold text-blue-600">{{ item.qty }}{{ item.unit }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 출고 결과 -->
+    {% if results.outbound %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+            <span class="font-semibold text-gray-800">출고</span>
+            <span class="bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">{{ results.outbound|length }}건</span>
+        </div>
+        <div class="divide-y divide-gray-50">
+            {% for item in results.outbound %}
+            <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50">
+                <div>
+                    <div class="font-medium text-gray-800">{{ item.store_name }} <span class="text-xs font-mono text-green-600 ml-2">{{ item.invoice_no }}</span></div>
+                    <div class="text-xs text-gray-500">{{ item.player_name }} #{{ item.player_number }} · {{ item.club_name }} · {{ item.shipping_date }}</div>
+                </div>
+                <span class="font-semibold text-green-600">{{ item.qty }}개</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+        <svg class="w-10 h-10 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <p class="text-gray-500">검색어를 입력하세요.</p>
+        <p class="text-sm text-gray-400 mt-1">구단명, 선수명, 번호, LOT, 매장명 등으로 검색할 수 있습니다.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}재고 관리{% endblock %}
+{% block page_title %}재고 관리{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+    {% if low_stock_count > 0 %}
+    <div class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3">
+        <svg class="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+        <span class="text-sm text-red-700 font-medium">안전재고 이하 품목이 <strong>{{ low_stock_count }}개</strong> 있습니다. 즉시 확인이 필요합니다.</span>
+    </div>
+    {% endif %}
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <form action="/inventory" method="get" class="flex gap-2">
+            <div class="relative flex-1 sm:w-72">
+                <input type="text" name="q" value="{{ q }}" placeholder="품목명 / 분류 검색..." class="search-input">
+                <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <button type="submit" class="btn-secondary">검색</button>
+        </form>
+        <a href="/inventory/new" class="btn-primary flex items-center gap-2 justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            재고 등록
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100">
+            <span class="font-medium text-gray-700">전체 {{ total }}개 품목</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>분류</th>
+                        <th>품목명</th>
+                        <th>규격</th>
+                        <th>현재수량</th>
+                        <th>안전재고</th>
+                        <th>상태</th>
+                        <th>갱신일</th>
+                        <th class="text-right">관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    {% set is_low = item.current_qty|int <= item.safe_qty|int %}
+                    <tr class="{% if is_low %}bg-red-50{% endif %}">
+                        <td>
+                            <span class="badge {% if item.category == '원재료' %}badge-blue{% elif item.category == '가공품' %}badge-orange{% else %}badge-gray{% endif %}">
+                                {{ item.category }}
+                            </span>
+                        </td>
+                        <td class="font-medium text-gray-800">{{ item.item_name }}</td>
+                        <td class="text-gray-500 text-sm">{{ item.spec }}</td>
+                        <td class="font-semibold {% if is_low %}text-red-600{% else %}text-gray-800{% endif %}">
+                            {{ item.current_qty }}<span class="text-xs font-normal text-gray-400 ml-1">{{ item.unit }}</span>
+                        </td>
+                        <td class="text-gray-500">{{ item.safe_qty }}<span class="text-xs text-gray-400 ml-1">{{ item.unit }}</span></td>
+                        <td>
+                            {% if is_low %}
+                            <span class="badge badge-red">부족</span>
+                            {% else %}
+                            <span class="badge badge-green">정상</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-gray-400 text-xs">{{ item.updated_at[:10] if item.updated_at else '' }}</td>
+                        <td class="text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <a href="/inventory/{{ item.inventory_id }}/edit" class="btn-sm-secondary">수정</a>
+                                <form action="/inventory/{{ item.inventory_id }}/delete" method="post" onsubmit="return confirm('삭제하시겠습니까?')">
+                                    <button type="submit" class="btn-sm-danger">삭제</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="text-center py-10 text-gray-400">등록된 재고가 없습니다.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include "partials/pagination.html" %}
+    </div>
+</div>
+{% endblock %}

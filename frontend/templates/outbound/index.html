@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}출고 관리{% endblock %}
+{% block page_title %}출고 관리{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <form action="/outbound" method="get" class="flex gap-2">
+            <div class="relative flex-1 sm:w-72">
+                <input type="text" name="q" value="{{ q }}" placeholder="매장 / 구단 / 선수 / 송장번호 검색..." class="search-input">
+                <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <button type="submit" class="btn-secondary">검색</button>
+        </form>
+        <a href="/outbound/new" class="btn-outbound flex items-center gap-2 justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            출고 등록
+        </a>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100">
+            <span class="font-medium text-gray-700">전체 {{ total }}건</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>출고일</th>
+                        <th>매장</th>
+                        <th>구단/콜라보</th>
+                        <th>선수</th>
+                        <th>수량</th>
+                        <th>송장번호</th>
+                        <th>담당자</th>
+                        <th class="text-right">관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td class="text-gray-600 text-sm font-medium">{{ item.shipping_date }}</td>
+                        <td class="font-medium text-gray-800">{{ item.store_name }}</td>
+                        <td>
+                            <div class="text-sm font-medium text-gray-800">{{ item.club_name }}</div>
+                            <div class="text-xs text-gray-500">{{ item.collab_name }}</div>
+                        </td>
+                        <td>
+                            <span class="font-medium text-gray-800">{{ item.player_name }}</span>
+                            <span class="text-xs text-gray-500 ml-1">#{{ item.player_number }}</span>
+                        </td>
+                        <td class="font-semibold text-green-600">{{ item.qty }}<span class="text-xs text-gray-400 ml-1">개</span></td>
+                        <td><span class="font-mono text-xs bg-green-50 text-green-700 px-2 py-1 rounded">{{ item.invoice_no }}</span></td>
+                        <td class="text-gray-500 text-sm">{{ item.manager }}</td>
+                        <td class="text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <a href="/outbound/{{ item.outbound_id }}/edit" class="btn-sm-secondary">수정</a>
+                                <form action="/outbound/{{ item.outbound_id }}/delete" method="post" onsubmit="return confirm('삭제하시겠습니까?')">
+                                    <button type="submit" class="btn-sm-danger">삭제</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="text-center py-10 text-gray-400">출고 내역이 없습니다.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include "partials/pagination.html" %}
+    </div>
+</div>
+{% endblock %}
