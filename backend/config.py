@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     GOOGLE_SHEET_ID: str = ""
     GOOGLE_SERVICE_ACCOUNT_FILE: str = "credentials.json"
+    GOOGLE_SERVICE_ACCOUNT_JSON: str = ""  # Render 환경: 서비스 계정 JSON 전체 내용을 문자열로
 
     class Config:
         env_file = ".env"

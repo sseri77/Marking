@@ -52,13 +52,21 @@ class SheetsService:
         if not self._try_import_gspread():
             self._demo_mode = True
             return
-        cred_file = settings.GOOGLE_SERVICE_ACCOUNT_FILE
         sheet_id = settings.GOOGLE_SHEET_ID
-        if not sheet_id or not os.path.exists(cred_file):
+        if not sheet_id:
             self._demo_mode = True
             return
         try:
-            creds = globals()["Credentials"].from_service_account_file(cred_file, scopes=SCOPES)
+            sa_json = settings.GOOGLE_SERVICE_ACCOUNT_JSON
+            if sa_json:
+                sa_info = json.loads(sa_json)
+                creds = globals()["Credentials"].from_service_account_info(sa_info, scopes=SCOPES)
+            else:
+                cred_file = settings.GOOGLE_SERVICE_ACCOUNT_FILE
+                if not os.path.exists(cred_file):
+                    self._demo_mode = True
+                    return
+                creds = globals()["Credentials"].from_service_account_file(cred_file, scopes=SCOPES)
             self._client = globals()["gspread"].authorize(creds)
             self._spreadsheet = self._client.open_by_key(sheet_id)
         except Exception:
