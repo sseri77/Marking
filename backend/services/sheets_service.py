@@ -18,12 +18,14 @@ SHEET_HEADERS = {
     "CLUB_MASTER": ["club_id", "club_name", "status", "created_at", "updated_at"],
     "COLLAB_MASTER": ["collab_id", "club_id", "collab_name", "status", "created_at", "updated_at"],
     "PLAYER_MASTER": ["player_id", "club_name", "collab_name", "player_name", "player_number", "status", "created_at", "updated_at"],
-    "VENDOR_MASTER": ["vendor_id", "vendor_name", "contact", "phone", "email", "status", "created_at", "updated_at"],
-    "ITEM_MASTER": ["item_id", "item_name", "spec", "unit", "category", "status", "created_at", "updated_at"],
-    "MATERIAL_INBOUND": ["inbound_id", "date", "vendor", "material_name", "spec", "lot_no", "qty", "unit", "manager", "memo", "created_at"],
-    "CUTTING_PROCESS": ["process_id", "work_order_no", "club_name", "collab_name", "player_name", "player_number", "input_qty", "success_qty", "defect_qty", "loss_qty", "status", "worker", "memo", "created_at"],
-    "STORE_OUTBOUND": ["outbound_id", "store_name", "club_name", "collab_name", "player_name", "player_number", "qty", "invoice_no", "shipping_date", "manager", "memo", "created_at"],
-    "INVENTORY_STATUS": ["inventory_id", "category", "item_name", "spec", "current_qty", "safe_qty", "unit", "updated_at"],
+    # 주문 (= 인쇄업체 발주 데이터)
+    "ORDER": ["order_id", "order_date", "club_name", "collab_name", "player_name", "player_number", "qty", "status", "memo", "created_at"],
+    # 롤 원단 입고
+    "ROLL_INBOUND": ["inbound_id", "inbound_date", "vendor", "roll_no", "order_ids", "manager", "memo", "status", "created_at"],
+    # 선수별 재단
+    "CUTTING_PROCESS": ["cutting_id", "inbound_id", "order_id", "club_name", "collab_name", "player_name", "player_number", "input_qty", "success_qty", "defect_qty", "loss_qty", "status", "worker", "memo", "created_at"],
+    # 출고
+    "STORE_OUTBOUND": ["outbound_id", "cutting_id", "store_name", "club_name", "collab_name", "player_name", "player_number", "qty", "invoice_no", "shipping_date", "manager", "memo", "created_at"],
 }
 
 

@@ -1,224 +1,141 @@
 {% extends "base.html" %}
 {% block title %}대시보드 - 마킹키트 관리시스템{% endblock %}
 {% block page_title %}대시보드{% endblock %}
-
 {% block content %}
 <div class="space-y-6">
 
-    <!-- 오늘 현황 카드 -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="stat-card border-l-4 border-blue-500">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">오늘 입고</p>
-                    <p class="text-2xl font-bold text-gray-800 mt-1">{{ stats.today_inbound }}<span class="text-sm font-normal text-gray-500 ml-1">m</span></p>
-                </div>
-                <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
-                </div>
-            </div>
-            <a href="/inbound" class="text-xs text-blue-600 hover:underline mt-2 block">입고 내역 →</a>
-        </div>
-
-        <div class="stat-card border-l-4 border-orange-500">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">오늘 재단</p>
-                    <p class="text-2xl font-bold text-gray-800 mt-1">{{ stats.today_cutting_success }}<span class="text-sm font-normal text-gray-500 ml-1">개</span></p>
-                </div>
-                <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-                    <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"/></svg>
-                </div>
-            </div>
-            <a href="/cutting" class="text-xs text-orange-600 hover:underline mt-2 block">재단 현황 →</a>
-        </div>
-
-        <div class="stat-card border-l-4 border-green-500">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">오늘 출고</p>
-                    <p class="text-2xl font-bold text-gray-800 mt-1">{{ stats.today_outbound }}<span class="text-sm font-normal text-gray-500 ml-1">개</span></p>
-                </div>
-                <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
-                </div>
-            </div>
-            <a href="/outbound" class="text-xs text-green-600 hover:underline mt-2 block">출고 내역 →</a>
-        </div>
-
-        <div class="stat-card border-l-4 {% if stats.low_stock_count > 0 %}border-red-500{% else %}border-gray-300{% endif %}">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">부족 재고</p>
-                    <p class="text-2xl font-bold {% if stats.low_stock_count > 0 %}text-red-600{% else %}text-gray-800{% endif %} mt-1">{{ stats.low_stock_count }}<span class="text-sm font-normal text-gray-500 ml-1">품목</span></p>
-                </div>
-                <div class="w-10 h-10 {% if stats.low_stock_count > 0 %}bg-red-100{% else %}bg-gray-100{% endif %} rounded-xl flex items-center justify-center">
-                    <svg class="w-5 h-5 {% if stats.low_stock_count > 0 %}text-red-600{% else %}text-gray-500{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                </div>
-            </div>
-            <a href="/inventory" class="text-xs {% if stats.low_stock_count > 0 %}text-red-600{% else %}text-gray-500{% endif %} hover:underline mt-2 block">재고 확인 →</a>
+    <!-- 공정 흐름 표시 -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <h2 class="text-sm font-semibold text-gray-500 mb-3">공정 흐름</h2>
+        <div class="flex items-center gap-2 flex-wrap">
+            <a href="/orders" class="flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition">
+                <span class="w-6 h-6 bg-purple-500 text-white text-xs rounded-full flex items-center justify-center font-bold">1</span>
+                <span class="text-sm font-medium text-purple-700">주문 / 발주</span>
+                <span class="text-xs text-purple-500 font-bold">{{ stats.total_orders }}건</span>
+            </a>
+            <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <a href="/inbound" class="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
+                <span class="w-6 h-6 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-bold">2</span>
+                <span class="text-sm font-medium text-blue-700">롤 원단 입고</span>
+                <span class="text-xs text-blue-500 font-bold">오늘 {{ stats.today_inbound }}건</span>
+            </a>
+            <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <a href="/cutting" class="flex items-center gap-2 px-4 py-2 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition">
+                <span class="w-6 h-6 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center font-bold">3</span>
+                <span class="text-sm font-medium text-orange-700">선수별 재단</span>
+                <span class="text-xs text-orange-500 font-bold">진행중 {{ stats.in_progress_cutting }}건</span>
+            </a>
+            <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <a href="/outbound" class="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition">
+                <span class="w-6 h-6 bg-green-500 text-white text-xs rounded-full flex items-center justify-center font-bold">4</span>
+                <span class="text-sm font-medium text-green-700">출고</span>
+                <span class="text-xs text-green-500 font-bold">오늘 {{ stats.today_outbound }}장</span>
+            </a>
         </div>
     </div>
 
-    <!-- 2단 레이아웃 -->
+    <!-- 통계 카드 -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="stat-card">
+            <div class="text-xs text-gray-500 mb-1">전체 주문</div>
+            <div class="text-2xl font-bold text-purple-600">{{ stats.total_orders }}</div>
+            <div class="text-xs text-gray-400 mt-1">미입고 {{ stats.pending_orders }}건</div>
+        </div>
+        <div class="stat-card">
+            <div class="text-xs text-gray-500 mb-1">재단 진행중</div>
+            <div class="text-2xl font-bold text-orange-500">{{ stats.in_progress_cutting }}</div>
+            <div class="text-xs text-gray-400 mt-1">누적 성공 {{ stats.total_cutting_success }}장</div>
+        </div>
+        <div class="stat-card">
+            <div class="text-xs text-gray-500 mb-1">오늘 출고</div>
+            <div class="text-2xl font-bold text-green-600">{{ stats.today_outbound }}</div>
+            <div class="text-xs text-gray-400 mt-1">누적 {{ stats.total_outbound_qty }}장</div>
+        </div>
+        <div class="stat-card">
+            <div class="text-xs text-gray-500 mb-1">등록 선수</div>
+            <div class="text-2xl font-bold text-gray-700">{{ stats.total_players }}</div>
+            <div class="text-xs text-gray-400 mt-1">구단 {{ stats.total_clubs }}개</div>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <!-- 재고 흐름 -->
-        <div class="lg:col-span-2 space-y-6">
-            <!-- 전체 현황 요약 -->
-            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h2 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                    전체 현황
-                </h2>
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="text-center p-3 bg-gray-50 rounded-xl">
-                        <div class="text-xs text-gray-500 mb-1">등록 구단</div>
-                        <div class="text-xl font-bold text-gray-800">{{ stats.total_clubs }}</div>
-                    </div>
-                    <div class="text-center p-3 bg-gray-50 rounded-xl">
-                        <div class="text-xs text-gray-500 mb-1">등록 선수</div>
-                        <div class="text-xl font-bold text-gray-800">{{ stats.total_players }}</div>
-                    </div>
-                    <div class="text-center p-3 bg-orange-50 rounded-xl">
-                        <div class="text-xs text-gray-500 mb-1">진행중 재단</div>
-                        <div class="text-xl font-bold text-orange-600">{{ stats.in_progress_cutting }}</div>
-                    </div>
-                </div>
-
-                <!-- 재고 흐름 시각화 -->
-                <div class="mt-5">
-                    <p class="text-xs text-gray-500 mb-3 font-medium">재고 흐름</p>
-                    <div class="flex items-center gap-2">
-                        <div class="flex-1 text-center">
-                            <div class="bg-blue-100 text-blue-700 rounded-xl p-3">
-                                <div class="text-xs font-medium">총 입고</div>
-                                <div class="text-lg font-bold">{{ stats.total_inbound_qty }}<span class="text-xs font-normal">m</span></div>
-                            </div>
-                        </div>
-                        <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        <div class="flex-1 text-center">
-                            <div class="bg-orange-100 text-orange-700 rounded-xl p-3">
-                                <div class="text-xs font-medium">가공중</div>
-                                <div class="text-lg font-bold">{{ stats.in_progress_cutting }}<span class="text-xs font-normal">건</span></div>
-                            </div>
-                        </div>
-                        <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        <div class="flex-1 text-center">
-                            <div class="bg-green-100 text-green-700 rounded-xl p-3">
-                                <div class="text-xs font-medium">총 출고</div>
-                                <div class="text-lg font-bold">{{ stats.total_outbound_qty }}<span class="text-xs font-normal">개</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <!-- 최근 주문 -->
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <h3 class="font-semibold text-gray-800">최근 주문</h3>
+                <a href="/orders/new" class="text-sm text-purple-600 hover:underline">+ 주문 등록</a>
             </div>
-
-            <!-- 최근 입고 내역 -->
-            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="font-semibold text-gray-800">최근 입고</h2>
-                    <a href="/inbound" class="text-xs text-blue-600 hover:underline">전체보기</a>
-                </div>
-                <div class="space-y-2">
-                    {% for item in recent_inbound %}
-                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                        <div class="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></div>
-                        <div class="flex-1 min-w-0">
-                            <div class="text-sm font-medium text-gray-800 truncate">{{ item.material_name }}</div>
-                            <div class="text-xs text-gray-500">{{ item.vendor }} · LOT: {{ item.lot_no }}</div>
-                        </div>
-                        <div class="text-sm font-semibold text-blue-600 flex-shrink-0">{{ item.qty }}{{ item.unit }}</div>
-                        <div class="text-xs text-gray-400 flex-shrink-0">{{ item.date }}</div>
-                    </div>
+            <table class="data-table">
+                <thead><tr><th>주문일</th><th>구단</th><th>선수</th><th>수량</th><th>상태</th></tr></thead>
+                <tbody>
+                    {% for o in recent_orders %}
+                    <tr>
+                        <td class="text-sm">{{ o.order_date }}</td>
+                        <td class="font-medium text-sm">{{ o.club_name }}</td>
+                        <td class="text-sm">{{ o.player_name }} {{ o.player_number }}번</td>
+                        <td class="text-right font-semibold text-sm">{{ o.qty }}장</td>
+                        <td>
+                            {% set s = o.status %}
+                            {% if s == '주문완료' %}<span class="badge-gray">주문완료</span>
+                            {% elif s == '입고완료' %}<span class="badge-blue">입고완료</span>
+                            {% elif s == '재단완료' %}<span class="badge-orange">재단완료</span>
+                            {% elif s == '출고완료' %}<span class="badge-green">출고완료</span>
+                            {% else %}<span class="badge-gray">{{ s }}</span>{% endif %}
+                        </td>
+                    </tr>
                     {% else %}
-                    <p class="text-sm text-gray-400 text-center py-4">입고 내역이 없습니다.</p>
+                    <tr><td colspan="5" class="text-center text-gray-400 py-4">주문 내역이 없습니다.</td></tr>
                     {% endfor %}
-                </div>
-            </div>
-
-            <!-- 최근 출고 내역 -->
-            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="font-semibold text-gray-800">최근 출고</h2>
-                    <a href="/outbound" class="text-xs text-green-600 hover:underline">전체보기</a>
-                </div>
-                <div class="space-y-2">
-                    {% for item in recent_outbound %}
-                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                        <div class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
-                        <div class="flex-1 min-w-0">
-                            <div class="text-sm font-medium text-gray-800 truncate">{{ item.store_name }}</div>
-                            <div class="text-xs text-gray-500">{{ item.player_name }} #{{ item.player_number }} · {{ item.club_name }}</div>
-                        </div>
-                        <div class="text-sm font-semibold text-green-600 flex-shrink-0">{{ item.qty }}개</div>
-                        <div class="text-xs text-gray-400 flex-shrink-0">{{ item.shipping_date }}</div>
-                    </div>
-                    {% else %}
-                    <p class="text-sm text-gray-400 text-center py-4">출고 내역이 없습니다.</p>
-                    {% endfor %}
-                </div>
-            </div>
+                </tbody>
+            </table>
         </div>
 
         <!-- 우측 패널 -->
-        <div class="space-y-6">
+        <div class="space-y-4">
             <!-- 빠른 등록 -->
-            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h2 class="font-semibold text-gray-800 mb-4">빠른 등록</h2>
-                <div class="space-y-2">
-                    <a href="/inbound/new" class="quick-btn bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        원재료 입고 등록
-                    </a>
-                    <a href="/cutting/new" class="quick-btn bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        재단 작업 등록
-                    </a>
-                    <a href="/outbound/new" class="quick-btn bg-green-50 hover:bg-green-100 text-green-700 border-green-200">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        출고 등록
-                    </a>
-                    <a href="/players/new" class="quick-btn bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        선수 등록
-                    </a>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                <h3 class="font-semibold text-gray-800 mb-3">빠른 등록</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <a href="/orders/new" class="quick-btn bg-purple-50 text-purple-700 hover:bg-purple-100">주문 등록</a>
+                    <a href="/inbound/new" class="quick-btn bg-blue-50 text-blue-700 hover:bg-blue-100">입고 등록</a>
+                    <a href="/cutting/new" class="quick-btn bg-orange-50 text-orange-700 hover:bg-orange-100">재단 등록</a>
+                    <a href="/outbound/new" class="quick-btn bg-green-50 text-green-700 hover:bg-green-100">출고 등록</a>
                 </div>
+            </div>
+
+            <!-- 재단 진행중 -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                <h3 class="font-semibold text-gray-800 mb-3">재단 진행중</h3>
+                {% if in_progress_cuttings %}
+                <div class="space-y-2">
+                    {% for c in in_progress_cuttings %}
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-700">{{ c.player_name }} {{ c.player_number }}번</span>
+                        <span class="text-orange-500 font-semibold">{{ c.success_qty }}/{{ c.input_qty }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-400">진행중인 재단이 없습니다.</p>
+                {% endif %}
             </div>
 
             <!-- 매장별 출고 현황 -->
-            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h2 class="font-semibold text-gray-800 mb-4">매장별 출고 현황</h2>
-                <div class="space-y-3">
+            {% if store_summary %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                <h3 class="font-semibold text-gray-800 mb-3">매장별 출고</h3>
+                <div class="space-y-2">
+                    {% set max_qty = store_summary.values() | max %}
                     {% for store, qty in store_summary.items() %}
                     <div>
                         <div class="flex justify-between text-sm mb-1">
-                            <span class="text-gray-700">{{ store }}</span>
-                            <span class="font-semibold text-gray-800">{{ qty }}개</span>
+                            <span class="text-gray-700 truncate">{{ store }}</span>
+                            <span class="font-semibold text-green-600 ml-2">{{ qty }}장</span>
                         </div>
                         <div class="w-full bg-gray-100 rounded-full h-1.5">
-                            {% set max_qty = store_summary.values()|max if store_summary else 1 %}
-                            <div class="bg-green-500 h-1.5 rounded-full" style="width: {{ (qty / max_qty * 100)|int }}%"></div>
+                            <div class="bg-green-400 h-1.5 rounded-full" style="width: {{ (qty / max_qty * 100) | int }}%"></div>
                         </div>
-                    </div>
-                    {% else %}
-                    <p class="text-sm text-gray-400 text-center py-4">출고 데이터가 없습니다.</p>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- 안전재고 경고 -->
-            {% if low_stock_items %}
-            <div class="bg-red-50 border border-red-200 rounded-2xl p-5">
-                <h2 class="font-semibold text-red-700 mb-3 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                    안전재고 부족 경고
-                </h2>
-                <div class="space-y-2">
-                    {% for item in low_stock_items %}
-                    <div class="bg-white rounded-lg p-3 border border-red-200">
-                        <div class="text-sm font-medium text-gray-800 truncate">{{ item.item_name }}</div>
-                        <div class="text-xs text-red-600 mt-0.5">현재 {{ item.current_qty }}{{ item.unit }} / 안전재고 {{ item.safe_qty }}{{ item.unit }}</div>
                     </div>
                     {% endfor %}
                 </div>
@@ -226,5 +143,31 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- 최근 출고 -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <h3 class="font-semibold text-gray-800">최근 출고</h3>
+            <a href="/outbound/new" class="text-sm text-green-600 hover:underline">+ 출고 등록</a>
+        </div>
+        <table class="data-table">
+            <thead><tr><th>출고일</th><th>매장</th><th>구단</th><th>선수</th><th>수량</th><th>송장번호</th></tr></thead>
+            <tbody>
+                {% for o in recent_outbound %}
+                <tr>
+                    <td class="text-sm">{{ o.shipping_date }}</td>
+                    <td class="font-medium text-sm">{{ o.store_name }}</td>
+                    <td class="text-sm">{{ o.club_name }}</td>
+                    <td class="text-sm">{{ o.player_name }} {{ o.player_number }}번</td>
+                    <td class="text-right font-semibold text-sm">{{ o.qty }}장</td>
+                    <td class="font-mono text-xs text-gray-500">{{ o.invoice_no }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center text-gray-400 py-4">출고 내역이 없습니다.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
 </div>
 {% endblock %}

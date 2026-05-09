@@ -65,22 +65,22 @@
                 선수 관리
             </a>
 
-            <div class="nav-section">물류 관리</div>
+            <div class="nav-section">공정 관리</div>
+            <a href="/orders" class="nav-item {% if '/orders' in request.url.path %}active{% endif %}">
+                <div class="nav-dot bg-purple-400"></div>
+                ① 주문 / 발주
+            </a>
             <a href="/inbound" class="nav-item {% if '/inbound' in request.url.path %}active{% endif %}">
                 <div class="nav-dot bg-blue-400"></div>
-                원재료 입고
+                ② 롤 원단 입고
             </a>
             <a href="/cutting" class="nav-item {% if '/cutting' in request.url.path %}active{% endif %}">
                 <div class="nav-dot bg-orange-400"></div>
-                가공(재단)
+                ③ 선수별 재단
             </a>
             <a href="/outbound" class="nav-item {% if '/outbound' in request.url.path %}active{% endif %}">
                 <div class="nav-dot bg-green-400"></div>
-                출고 관리
-            </a>
-            <a href="/inventory" class="nav-item {% if '/inventory' in request.url.path %}active{% endif %}">
-                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
-                재고 관리
+                ④ 출고
             </a>
 
             <div class="nav-section">검색</div>

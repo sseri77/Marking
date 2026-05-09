@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from backend.config import get_settings
 from backend.services.sheets_service import get_sheets_service
 from backend.utils.helpers import require_auth
-from backend.api import auth, clubs, collabs, players, inbound, cutting, outbound, inventory, search
+from backend.api import auth, clubs, collabs, players, orders, inbound, cutting, outbound, search
 
 settings = get_settings()
 
@@ -16,7 +16,7 @@ app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 
 templates = Jinja2Templates(directory="frontend/templates")
 
-for router_module in [auth, clubs, collabs, players, inbound, cutting, outbound, inventory, search]:
+for router_module in [auth, clubs, collabs, players, orders, inbound, cutting, outbound, search]:
     app.include_router(router_module.router)
 
 
@@ -26,44 +26,52 @@ async def dashboard(request: Request):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
-    inbound_data = svc.get_all("MATERIAL_INBOUND")
+    today = __import__("datetime").date.today().isoformat()
+
+    order_data = svc.get_all("ORDER")
+    inbound_data = svc.get_all("ROLL_INBOUND")
     cutting_data = svc.get_all("CUTTING_PROCESS")
     outbound_data = svc.get_all("STORE_OUTBOUND")
-    inventory_data = svc.get_all("INVENTORY_STATUS")
     clubs_data = svc.get_all("CLUB_MASTER")
     players_data = svc.get_all("PLAYER_MASTER")
 
-    today = __import__("datetime").date.today().isoformat()
-
     stats = {
-        "today_inbound": sum(int(i.get("qty", 0)) for i in inbound_data if i.get("date", "") == today),
-        "today_cutting_success": sum(int(i.get("success_qty", 0)) for i in cutting_data if i.get("created_at", "").startswith(today)),
-        "today_outbound": sum(int(i.get("qty", 0)) for i in outbound_data if i.get("shipping_date", "") == today),
-        "low_stock_count": len([i for i in inventory_data if int(i.get("current_qty", 0)) <= int(i.get("safe_qty", 0))]),
+        "total_orders": len(order_data),
+        "pending_orders": len([o for o in order_data if o.get("status") == "주문완료"]),
+        "today_inbound": len([i for i in inbound_data if i.get("inbound_date", "") == today]),
+        "in_progress_cutting": len([c for c in cutting_data if c.get("status") == "진행중"]),
+        "today_outbound": sum(int(o.get("qty", 0)) for o in outbound_data if o.get("shipping_date", "") == today),
         "total_clubs": len(clubs_data),
         "total_players": len(players_data),
-        "in_progress_cutting": len([c for c in cutting_data if c.get("status") == "진행중"]),
-        "total_inbound_qty": sum(int(i.get("qty", 0)) for i in inbound_data),
-        "total_outbound_qty": sum(int(i.get("qty", 0)) for i in outbound_data),
+        "total_cutting_success": sum(int(c.get("success_qty", 0)) for c in cutting_data),
+        "total_outbound_qty": sum(int(o.get("qty", 0)) for o in outbound_data),
     }
 
+    # 주문 현황 (상태별)
+    order_status = {}
+    for o in order_data:
+        s = o.get("status", "")
+        order_status[s] = order_status.get(s, 0) + 1
+
+    # 매장별 출고 현황
     store_summary = {}
     for o in outbound_data:
         store = o.get("store_name", "")
         store_summary[store] = store_summary.get(store, 0) + int(o.get("qty", 0))
 
-    low_stock_items = [i for i in inventory_data if int(i.get("current_qty", 0)) <= int(i.get("safe_qty", 0))]
-    recent_inbound = sorted(inbound_data, key=lambda x: x.get("date", ""), reverse=True)[:5]
+    recent_orders = sorted(order_data, key=lambda x: x.get("order_date", ""), reverse=True)[:5]
     recent_outbound = sorted(outbound_data, key=lambda x: x.get("shipping_date", ""), reverse=True)[:5]
+    in_progress_cuttings = [c for c in cutting_data if c.get("status") == "진행중"][:5]
 
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "user": user,
         "stats": stats,
+        "order_status": order_status,
         "store_summary": store_summary,
-        "low_stock_items": low_stock_items,
-        "recent_inbound": recent_inbound,
+        "recent_orders": recent_orders,
         "recent_outbound": recent_outbound,
+        "in_progress_cuttings": in_progress_cuttings,
     })
 
 

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}주문 / 발주 관리{% endblock %}
+{% block page_title %}① 주문 / 발주 관리{% endblock %}
+{% block content %}
+<div class="space-y-4">
+    <!-- 상단 액션 -->
+    <div class="flex flex-col sm:flex-row gap-3 justify-between">
+        <form method="get" class="flex gap-2">
+            <input type="text" name="q" value="{{ q }}" placeholder="구단, 선수명, 등번호 검색..."
+                class="search-input flex-1 sm:w-64">
+            <button type="submit" class="btn-primary px-4 py-2 rounded-lg text-sm">검색</button>
+            {% if q %}<a href="/orders" class="btn-secondary px-4 py-2 rounded-lg text-sm">초기화</a>{% endif %}
+        </form>
+        <a href="/orders/new" class="btn-primary px-4 py-2 rounded-lg text-sm text-center">+ 주문 등록</a>
+    </div>
+
+    <!-- 테이블 -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>주문일</th>
+                    <th>구단</th>
+                    <th>콜라보</th>
+                    <th>선수명</th>
+                    <th>등번호</th>
+                    <th>주문수량</th>
+                    <th>상태</th>
+                    <th>메모</th>
+                    <th>관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.order_date }}</td>
+                    <td class="font-medium">{{ item.club_name }}</td>
+                    <td>{{ item.collab_name }}</td>
+                    <td>{{ item.player_name }}</td>
+                    <td class="font-bold text-center">{{ item.player_number }}</td>
+                    <td class="text-right font-semibold">{{ item.qty }}장</td>
+                    <td>
+                        {% set s = item.status %}
+                        {% if s == '주문완료' %}<span class="badge-gray">주문완료</span>
+                        {% elif s == '입고완료' %}<span class="badge-blue">입고완료</span>
+                        {% elif s == '재단완료' %}<span class="badge-orange">재단완료</span>
+                        {% elif s == '출고완료' %}<span class="badge-green">출고완료</span>
+                        {% else %}<span class="badge-gray">{{ s }}</span>{% endif %}
+                    </td>
+                    <td class="text-gray-500 text-sm">{{ item.memo }}</td>
+                    <td>
+                        <div class="flex gap-2">
+                            <a href="/orders/{{ item.order_id }}/edit" class="text-blue-600 hover:underline text-sm">수정</a>
+                            <form method="post" action="/orders/{{ item.order_id }}/delete" onsubmit="return confirm('삭제하시겠습니까?')">
+                                <button type="submit" class="text-red-500 hover:underline text-sm">삭제</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="9" class="text-center text-gray-400 py-8">등록된 주문이 없습니다.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 페이징 -->
+    {% if total_pages > 1 %}
+    <div class="flex justify-center gap-2">
+        {% for p in range(1, total_pages + 1) %}
+        <a href="?page={{ p }}{% if q %}&q={{ q }}{% endif %}"
+            class="px-3 py-1 rounded-lg text-sm {% if p == page %}bg-blue-600 text-white{% else %}bg-white border text-gray-600 hover:bg-gray-50{% endif %}">{{ p }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="text-sm text-gray-500 text-right">총 {{ total }}건</div>
+</div>
+{% endblock %}

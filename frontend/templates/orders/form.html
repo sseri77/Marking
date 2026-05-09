@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{% if action == 'create' %}주문 등록{% else %}주문 수정{% endif %}{% endblock %}
+{% block page_title %}{% if action == 'create' %}주문 등록{% else %}주문 수정{% endif %}{% endblock %}
+{% block content %}
+<div class="max-w-2xl">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        {% if error %}
+        <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="{% if action == 'create' %}/orders/new{% else %}/orders/{{ item.order_id }}/edit{% endif %}">
+            <div class="grid grid-cols-1 gap-4">
+                <div class="form-group">
+                    <label class="form-label">주문일 *</label>
+                    <input type="date" name="order_date" value="{{ item.order_date if item else today }}" required class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">구단 *</label>
+                    <select name="club_name" id="club-select" required class="form-input">
+                        <option value="">구단 선택</option>
+                        {% for c in clubs %}
+                        <option value="{{ c.club_name }}" {% if item and item.club_name == c.club_name %}selected{% endif %}>{{ c.club_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">콜라보 *</label>
+                    <select name="collab_name" id="collab-select" required class="form-input">
+                        <option value="">콜라보 선택</option>
+                        {% for c in collabs %}
+                        <option value="{{ c.collab_name }}" {% if item and item.collab_name == c.collab_name %}selected{% endif %}>{{ c.collab_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label class="form-label">선수명 *</label>
+                        <input type="text" name="player_name" value="{{ item.player_name if item else '' }}"
+                            list="player-list" required class="form-input" placeholder="선수명">
+                        <datalist id="player-list">
+                            {% for p in players %}<option value="{{ p.player_name }}">{% endfor %}
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">등번호 *</label>
+                        <input type="text" name="player_number" value="{{ item.player_number if item else '' }}"
+                            required class="form-input" placeholder="예) 7">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">주문수량 (장) *</label>
+                    <input type="number" name="qty" value="{{ item.qty if item else '' }}" min="1" required class="form-input" placeholder="예) 50">
+                </div>
+
+                {% if action == 'edit' %}
+                <div class="form-group">
+                    <label class="form-label">상태</label>
+                    <select name="status" class="form-input">
+                        {% for s in ['주문완료', '입고완료', '재단완료', '출고완료'] %}
+                        <option value="{{ s }}" {% if item and item.status == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                <div class="form-group">
+                    <label class="form-label">메모</label>
+                    <textarea name="memo" rows="2" class="form-input" placeholder="비고사항">{{ item.memo if item else '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button type="submit" class="btn-primary px-6 py-2 rounded-lg">
+                    {% if action == 'create' %}주문 등록{% else %}저장{% endif %}
+                </button>
+                <a href="/orders" class="btn-secondary px-6 py-2 rounded-lg">취소</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
