@@ -3,77 +3,103 @@
 {% block page_title %}① 주문 / 발주 관리{% endblock %}
 {% block content %}
 <div class="space-y-4">
-    <!-- 상단 액션 -->
+
     <div class="flex flex-col sm:flex-row gap-3 justify-between">
-        <form method="get" class="flex gap-2">
-            <input type="text" name="q" value="{{ q }}" placeholder="구단, 선수명, 등번호 검색..."
-                class="search-input flex-1 sm:w-64">
-            <button type="submit" class="btn-primary px-4 py-2 rounded-lg text-sm">검색</button>
-            {% if q %}<a href="/orders" class="btn-secondary px-4 py-2 rounded-lg text-sm">초기화</a>{% endif %}
+        <form method="get" class="flex gap-2 flex-1">
+            <div class="relative flex-1 sm:max-w-xs">
+                <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="text" name="q" value="{{ q }}" placeholder="구단, 선수명, 등번호 검색..."
+                    class="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+            </div>
+            <button type="submit" class="btn-primary px-4 py-2.5 text-sm">검색</button>
+            {% if q %}<a href="/orders" class="btn-secondary px-4 py-2.5 text-sm">초기화</a>{% endif %}
         </form>
-        <a href="/orders/new" class="btn-primary px-4 py-2 rounded-lg text-sm text-center">+ 주문 등록</a>
+        <a href="/orders/new" class="btn-primary px-5 py-2.5 text-sm text-center font-semibold">+ 주문 등록</a>
     </div>
 
-    <!-- 테이블 -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>주문일</th>
-                    <th>구단</th>
-                    <th>콜라보</th>
-                    <th>선수명</th>
-                    <th>등번호</th>
-                    <th>주문수량</th>
-                    <th>상태</th>
-                    <th>메모</th>
-                    <th>관리</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in items %}
-                <tr>
-                    <td>{{ item.order_date }}</td>
-                    <td class="font-medium">{{ item.club_name }}</td>
-                    <td>{{ item.collab_name }}</td>
-                    <td>{{ item.player_name }}</td>
-                    <td class="font-bold text-center">{{ item.player_number }}</td>
-                    <td class="text-right font-semibold">{{ item.qty }}장</td>
-                    <td>
-                        {% set s = item.status %}
-                        {% if s == '주문완료' %}<span class="badge-gray">주문완료</span>
-                        {% elif s == '입고완료' %}<span class="badge-blue">입고완료</span>
-                        {% elif s == '재단완료' %}<span class="badge-orange">재단완료</span>
-                        {% elif s == '출고완료' %}<span class="badge-green">출고완료</span>
-                        {% else %}<span class="badge-gray">{{ s }}</span>{% endif %}
-                    </td>
-                    <td class="text-gray-500 text-sm">{{ item.memo }}</td>
-                    <td>
-                        <div class="flex gap-2">
-                            <a href="/orders/{{ item.order_id }}/edit" class="text-blue-600 hover:underline text-sm">수정</a>
-                            <form method="post" action="/orders/{{ item.order_id }}/delete" onsubmit="return confirm('삭제하시겠습니까?')">
-                                <button type="submit" class="text-red-500 hover:underline text-sm">삭제</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                {% else %}
-                <tr><td colspan="9" class="text-center text-gray-400 py-8">등록된 주문이 없습니다.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50 border-b border-gray-100">
+                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">주문일</th>
+                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">구단 / 콜라보</th>
+                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">선수</th>
+                        <th class="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">수량</th>
+                        <th class="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">상태</th>
+                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">메모</th>
+                        <th class="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">관리</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    {% for item in items %}
+                    <tr class="hover:bg-purple-50/30 transition-colors">
+                        <td class="px-5 py-4 text-gray-500 whitespace-nowrap">{{ item.order_date }}</td>
+                        <td class="px-5 py-4">
+                            <div class="font-semibold text-gray-800">{{ item.club_name }}</div>
+                            <div class="text-xs text-gray-400 mt-0.5">{{ item.collab_name }}</div>
+                        </td>
+                        <td class="px-5 py-4">
+                            <div class="flex items-center gap-2">
+                                <span class="w-7 h-7 rounded-full bg-purple-100 text-purple-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                                    {{ item.player_number }}
+                                </span>
+                                <span class="font-medium text-gray-800">{{ item.player_name }}</span>
+                            </div>
+                        </td>
+                        <td class="px-5 py-4 text-center">
+                            <span class="font-bold text-gray-800 text-base">{{ item.qty }}</span>
+                            <span class="text-xs text-gray-400">장</span>
+                        </td>
+                        <td class="px-5 py-4 text-center">
+                            {% set s = item.status %}
+                            {% if s == '주문완료' %}<span class="badge-gray">주문완료</span>
+                            {% elif s == '입고완료' %}<span class="badge-blue">입고완료</span>
+                            {% elif s == '재단완료' %}<span class="badge-orange">재단완료</span>
+                            {% elif s == '출고완료' %}<span class="badge-green">출고완료</span>
+                            {% else %}<span class="badge-gray">{{ s }}</span>{% endif %}
+                        </td>
+                        <td class="px-5 py-4 text-gray-400 text-xs max-w-xs truncate">{{ item.memo }}</td>
+                        <td class="px-5 py-4">
+                            <div class="flex items-center justify-center gap-2">
+                                <a href="/orders/{{ item.order_id }}/edit"
+                                    class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">수정</a>
+                                <form method="post" action="/orders/{{ item.order_id }}/delete"
+                                    onsubmit="return confirm('삭제하시겠습니까?')">
+                                    <button type="submit"
+                                        class="px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">삭제</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="px-5 py-12 text-center text-gray-400">
+                            <div class="text-4xl mb-2">📋</div>
+                            <div>등록된 주문이 없습니다.</div>
+                            <a href="/orders/new" class="mt-2 inline-block text-purple-500 hover:underline text-sm">주문 등록하기</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <!-- 페이징 -->
-    {% if total_pages > 1 %}
-    <div class="flex justify-center gap-2">
-        {% for p in range(1, total_pages + 1) %}
-        <a href="?page={{ p }}{% if q %}&q={{ q }}{% endif %}"
-            class="px-3 py-1 rounded-lg text-sm {% if p == page %}bg-blue-600 text-white{% else %}bg-white border text-gray-600 hover:bg-gray-50{% endif %}">{{ p }}</a>
-        {% endfor %}
+    <div class="flex items-center justify-between">
+        <div class="text-sm text-gray-400">총 <span class="font-semibold text-gray-700">{{ total }}</span>건</div>
+        {% if total_pages > 1 %}
+        <div class="flex gap-1.5">
+            {% for p in range(1, total_pages + 1) %}
+            <a href="?page={{ p }}{% if q %}&q={{ q }}{% endif %}"
+                class="w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium
+                    {% if p == page %}bg-blue-600 text-white{% else %}bg-white border border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">{{ p }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 
-    <div class="text-sm text-gray-500 text-right">총 {{ total }}건</div>
 </div>
 {% endblock %}

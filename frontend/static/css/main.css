@@ -47,13 +47,14 @@
 
 /* 배지 */
 .badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold;
 }
-.badge-green { @apply bg-green-100 text-green-700; }
-.badge-blue { @apply bg-blue-100 text-blue-700; }
-.badge-orange { @apply bg-orange-100 text-orange-700; }
-.badge-red { @apply bg-red-100 text-red-700; }
-.badge-gray { @apply bg-gray-100 text-gray-600; }
+.badge-green  { @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700; }
+.badge-blue   { @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700; }
+.badge-orange { @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700; }
+.badge-red    { @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700; }
+.badge-gray   { @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600; }
+.badge-purple { @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700; }
 
 /* 버튼 */
 .btn-primary {
