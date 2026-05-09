@@ -1,13 +1,3 @@
-import os
-from flask import Flask
-
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "인벤토리 관리 시스템 작동 중!"
-
-if __name__ == "__main__":
-    # Render 환경에 맞는 포트 설정
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+# 이 파일은 레거시입니다. main.py 를 사용하세요.
+# Render 시작 명령: uvicorn main:app --host 0.0.0.0 --port $PORT
+from main import app  # noqa: F401
