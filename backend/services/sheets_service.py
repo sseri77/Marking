@@ -58,18 +58,37 @@ class SheetsService:
             self._demo_mode = True
             return
         try:
-            sa_json = settings.GOOGLE_SERVICE_ACCOUNT_JSON
-            print(f"[Sheets] GOOGLE_SERVICE_ACCOUNT_JSON set: {bool(sa_json)}, length: {len(sa_json)}")
-            if sa_json:
-                sa_info = json.loads(sa_json)
-                creds = globals()["Credentials"].from_service_account_info(sa_info, scopes=SCOPES)
+            sa_info = None
+            if settings.GOOGLE_SERVICE_ACCOUNT_JSON:
+                sa_info = json.loads(settings.GOOGLE_SERVICE_ACCOUNT_JSON)
+                print("[Sheets] Using GOOGLE_SERVICE_ACCOUNT_JSON env var")
+            elif settings.client_email:
+                sa_info = {
+                    "type": settings.type,
+                    "project_id": settings.project_id,
+                    "private_key_id": settings.private_key_id,
+                    "private_key": settings.private_key.replace("\\n", "\n"),
+                    "client_email": settings.client_email,
+                    "client_id": settings.client_id,
+                    "auth_uri": settings.auth_uri,
+                    "token_uri": settings.token_uri,
+                    "auth_provider_x509_cert_url": settings.auth_provider_x509_cert_url,
+                    "client_x509_cert_url": settings.client_x509_cert_url,
+                    "universe_domain": settings.universe_domain or "googleapis.com",
+                }
+                print(f"[Sheets] Using individual env vars, client_email: {settings.client_email}")
             else:
                 cred_file = settings.GOOGLE_SERVICE_ACCOUNT_FILE
                 if not os.path.exists(cred_file):
-                    print(f"[Sheets] credentials file not found: {cred_file}")
+                    print("[Sheets] No credentials found (JSON env var, individual env vars, or file)")
                     self._demo_mode = True
                     return
                 creds = globals()["Credentials"].from_service_account_file(cred_file, scopes=SCOPES)
+                print("[Sheets] Using credentials file")
+                sa_info = None
+
+            if sa_info:
+                creds = globals()["Credentials"].from_service_account_info(sa_info, scopes=SCOPES)
             self._client = globals()["gspread"].authorize(creds)
             self._spreadsheet = self._client.open_by_key(sheet_id)
             print("[Sheets] Connected successfully")

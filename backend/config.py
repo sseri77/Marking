@@ -11,7 +11,20 @@ class Settings(BaseSettings):
 
     GOOGLE_SHEET_ID: str = ""
     GOOGLE_SERVICE_ACCOUNT_FILE: str = "credentials.json"
-    GOOGLE_SERVICE_ACCOUNT_JSON: str = ""  # Render 환경: 서비스 계정 JSON 전체 내용을 문자열로
+    GOOGLE_SERVICE_ACCOUNT_JSON: str = ""
+
+    # Render 개별 환경변수 방식
+    type: str = ""
+    project_id: str = ""
+    private_key_id: str = ""
+    private_key: str = ""
+    client_email: str = ""
+    client_id: str = ""
+    auth_uri: str = ""
+    token_uri: str = ""
+    auth_provider_x509_cert_url: str = ""
+    client_x509_cert_url: str = ""
+    universe_domain: str = ""
 
     class Config:
         env_file = ".env"
