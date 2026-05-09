@@ -64,12 +64,15 @@ class SheetsService:
             else:
                 cred_file = settings.GOOGLE_SERVICE_ACCOUNT_FILE
                 if not os.path.exists(cred_file):
+                    print(f"[Sheets] credentials file not found: {cred_file}")
                     self._demo_mode = True
                     return
                 creds = globals()["Credentials"].from_service_account_file(cred_file, scopes=SCOPES)
             self._client = globals()["gspread"].authorize(creds)
             self._spreadsheet = self._client.open_by_key(sheet_id)
-        except Exception:
+            print("[Sheets] Connected successfully")
+        except Exception as e:
+            print(f"[Sheets] Connection failed: {e}")
             self._demo_mode = True
 
     def _get_sheet(self, sheet_name: str) -> Optional[Any]:
