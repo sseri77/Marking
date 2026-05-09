@@ -53,11 +53,13 @@ class SheetsService:
             self._demo_mode = True
             return
         sheet_id = settings.GOOGLE_SHEET_ID
+        print(f"[Sheets] GOOGLE_SHEET_ID set: {bool(sheet_id)}")
         if not sheet_id:
             self._demo_mode = True
             return
         try:
             sa_json = settings.GOOGLE_SERVICE_ACCOUNT_JSON
+            print(f"[Sheets] GOOGLE_SERVICE_ACCOUNT_JSON set: {bool(sa_json)}, length: {len(sa_json)}")
             if sa_json:
                 sa_info = json.loads(sa_json)
                 creds = globals()["Credentials"].from_service_account_info(sa_info, scopes=SCOPES)
