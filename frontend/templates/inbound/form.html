@@ -1,68 +1,82 @@
 {% extends "base.html" %}
 {% block title %}{% if action == 'create' %}입고 등록{% else %}입고 수정{% endif %}{% endblock %}
-{% block page_title %}{% if action == 'create' %}원재료 입고 등록{% else %}입고 수정{% endif %}{% endblock %}
-
+{% block page_title %}{% if action == 'create' %}② 롤 원단 입고 등록{% else %}입고 수정{% endif %}{% endblock %}
 {% block content %}
 <div class="max-w-2xl">
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        {% if error %}<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{{ error }}</div>{% endif %}
-        <form action="/inbound/{% if action == 'edit' %}{{ item.inbound_id }}/edit{% else %}new{% endif %}" method="post" class="space-y-5">
-            <div class="grid grid-cols-2 gap-4">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        {% if error %}
+        <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="{% if action == 'create' %}/inbound/new{% else %}/inbound/{{ item.inbound_id }}/edit{% endif %}">
+            <div class="grid grid-cols-1 gap-4">
                 <div class="form-group">
-                    <label class="form-label">입고일 <span class="text-red-500">*</span></label>
-                    <input type="date" name="date" required value="{{ item.date if item else today }}" class="form-input">
+                    <label class="form-label">입고일 *</label>
+                    <input type="date" name="inbound_date" value="{{ item.inbound_date if item else today }}" required class="form-input">
                 </div>
+
                 <div class="form-group">
-                    <label class="form-label">거래처 <span class="text-red-500">*</span></label>
-                    <input type="text" name="vendor" required value="{{ item.vendor if item else '' }}" class="form-input" placeholder="거래처명" list="vendor-list">
-                    <datalist id="vendor-list">
-                        {% for v in vendors %}<option value="{{ v.vendor_name }}">{% endfor %}
-                    </datalist>
+                    <label class="form-label">인쇄업체 *</label>
+                    <input type="text" name="vendor" value="{{ item.vendor if item else '' }}" required class="form-input" placeholder="인쇄업체명">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">롤번호 *</label>
+                    <input type="text" name="roll_no" value="{{ item.roll_no if item else '' }}" required class="form-input" placeholder="예) ROLL-20240501-001">
+                </div>
+
+                <!-- 주문 연결 -->
+                <div class="form-group">
+                    <label class="form-label">연결 주문 (이 롤에 포함된 주문 선택)</label>
+                    <div class="border border-gray-200 rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                        {% if orders %}
+                            {% for o in orders %}
+                            <label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                <input type="checkbox" name="order_ids_check" value="{{ o.order_id }}"
+                                    {% if item and o.order_id in item.order_ids %}checked{% endif %}
+                                    onchange="updateOrderIds()" class="rounded">
+                                <span class="font-mono text-xs text-gray-400">{{ o.order_id }}</span>
+                                <span>{{ o.club_name }} / {{ o.player_name }} {{ o.player_number }}번</span>
+                                <span class="text-blue-600 font-semibold">{{ o.qty }}장</span>
+                                <span class="badge-gray text-xs">{{ o.status }}</span>
+                            </label>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-gray-400 text-sm">등록된 주문이 없습니다. 먼저 주문을 등록해주세요.</p>
+                        {% endif %}
+                    </div>
+                    <input type="hidden" name="order_ids" id="order-ids-input" value="{{ item.order_ids if item else '' }}">
+                    <p class="text-xs text-gray-400 mt-1">선택된 주문: <span id="selected-orders">{{ item.order_ids if item else '없음' }}</span></p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">담당자 *</label>
+                    <input type="text" name="manager" value="{{ item.manager if item else '' }}" required class="form-input" placeholder="담당자명">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">메모</label>
+                    <textarea name="memo" rows="2" class="form-input" placeholder="비고사항">{{ item.memo if item else '' }}</textarea>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div class="form-group">
-                    <label class="form-label">원재료명 <span class="text-red-500">*</span></label>
-                    <input type="text" name="material_name" required value="{{ item.material_name if item else '' }}" class="form-input" placeholder="예: 폴리에스터">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">규격</label>
-                    <input type="text" name="spec" value="{{ item.spec if item else '' }}" class="form-input" placeholder="예: 150cm/white">
-                </div>
-            </div>
-            <div class="grid grid-cols-3 gap-4">
-                <div class="form-group col-span-2">
-                    <label class="form-label">LOT번호 <span class="text-red-500">*</span></label>
-                    <input type="text" name="lot_no" required value="{{ item.lot_no if item else '' }}" class="form-input" placeholder="예: LOT-240501">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">단위</label>
-                    <select name="unit" class="form-select">
-                        {% for u in ['m', 'kg', 'ea', 'roll', 'yard'] %}
-                        <option value="{{ u }}" {% if item and item.unit == u %}selected{% elif not item and u == 'm' %}selected{% endif %}>{{ u }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div class="form-group">
-                    <label class="form-label">수량 <span class="text-red-500">*</span></label>
-                    <input type="number" name="qty" required min="1" value="{{ item.qty if item else '' }}" class="form-input" placeholder="0" inputmode="numeric">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">담당자 <span class="text-red-500">*</span></label>
-                    <input type="text" name="manager" required value="{{ item.manager if item else '' }}" class="form-input" placeholder="담당자명">
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">메모</label>
-                <textarea name="memo" rows="2" class="form-input" placeholder="메모 입력">{{ item.memo if item else '' }}</textarea>
-            </div>
-            <div class="flex gap-3 pt-2">
-                <button type="submit" class="btn-inbound flex-1">{% if action == 'create' %}입고 등록{% else %}저장{% endif %}</button>
-                <a href="/inbound" class="btn-secondary flex-1 text-center">취소</a>
+
+            <div class="flex gap-3 mt-6">
+                <button type="submit" class="btn-inbound px-6 py-2 rounded-lg">
+                    {% if action == 'create' %}입고 등록{% else %}저장{% endif %}
+                </button>
+                <a href="/inbound" class="btn-secondary px-6 py-2 rounded-lg">취소</a>
             </div>
         </form>
     </div>
 </div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+function updateOrderIds() {
+    const checked = Array.from(document.querySelectorAll('input[name="order_ids_check"]:checked'))
+        .map(cb => cb.value);
+    document.getElementById('order-ids-input').value = checked.join(',');
+    document.getElementById('selected-orders').textContent = checked.length ? checked.join(', ') : '없음';
+}
+</script>
 {% endblock %}

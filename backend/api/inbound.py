@@ -6,7 +6,7 @@ from backend.utils.helpers import generate_id, now_str, today_str, require_auth,
 
 router = APIRouter()
 templates = Jinja2Templates(directory="frontend/templates")
-SHEET = "MATERIAL_INBOUND"
+SHEET = "ROLL_INBOUND"
 
 
 @router.get("/inbound", response_class=HTMLResponse)
@@ -15,8 +15,8 @@ async def inbound_list(request: Request, q: str = "", page: int = 1):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
-    data = svc.search(SHEET, q, ["vendor", "material_name", "lot_no"]) if q else svc.get_all(SHEET)
-    data = sorted(data, key=lambda x: x.get("date", ""), reverse=True)
+    data = svc.search(SHEET, q, ["vendor", "roll_no", "order_ids"]) if q else svc.get_all(SHEET)
+    data = sorted(data, key=lambda x: x.get("inbound_date", ""), reverse=True)
     paged = paginate(data, page)
     return templates.TemplateResponse("inbound/index.html", {"request": request, "user": user, "q": q, **paged})
 
@@ -27,20 +27,20 @@ async def inbound_new(request: Request):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
-    vendors = svc.get_all("VENDOR_MASTER")
-    return templates.TemplateResponse("inbound/form.html", {"request": request, "user": user, "item": None, "vendors": vendors, "today": today_str(), "action": "create"})
+    orders = [o for o in svc.get_all("ORDER") if o.get("status") in ("주문완료", "발주완료")]
+    return templates.TemplateResponse("inbound/form.html", {
+        "request": request, "user": user, "item": None,
+        "orders": orders, "today": today_str(), "action": "create"
+    })
 
 
 @router.post("/inbound/new")
 async def inbound_create(
     request: Request,
-    date: str = Form(...),
+    inbound_date: str = Form(...),
     vendor: str = Form(...),
-    material_name: str = Form(...),
-    spec: str = Form(""),
-    lot_no: str = Form(...),
-    qty: int = Form(...),
-    unit: str = Form("m"),
+    roll_no: str = Form(...),
+    order_ids: str = Form(""),
     manager: str = Form(...),
     memo: str = Form(""),
 ):
@@ -48,11 +48,21 @@ async def inbound_create(
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
-    existing = svc.get_all(SHEET)
-    if any(r.get("lot_no") == lot_no for r in existing):
-        vendors = svc.get_all("VENDOR_MASTER")
-        return templates.TemplateResponse("inbound/form.html", {"request": request, "user": user, "item": None, "vendors": vendors, "today": today_str(), "action": "create", "error": f"LOT번호 {lot_no}는 이미 등록되어 있습니다."})
-    svc.append_row(SHEET, {"inbound_id": generate_id("INB"), "date": date, "vendor": vendor, "material_name": material_name, "spec": spec, "lot_no": lot_no, "qty": qty, "unit": unit, "manager": manager, "memo": memo, "created_at": now_str()})
+    inbound_id = generate_id("RIB")
+    svc.append_row(SHEET, {
+        "inbound_id": inbound_id,
+        "inbound_date": inbound_date,
+        "vendor": vendor,
+        "roll_no": roll_no,
+        "order_ids": order_ids,
+        "manager": manager,
+        "memo": memo,
+        "status": "입고완료",
+        "created_at": now_str(),
+    })
+    # 연결된 주문 상태 → 입고완료로 업데이트
+    for oid in [o.strip() for o in order_ids.split(",") if o.strip()]:
+        svc.update_row("ORDER", "order_id", oid, {"status": "입고완료"})
     return RedirectResponse(url="/inbound", status_code=303)
 
 
@@ -62,25 +72,25 @@ async def inbound_edit(request: Request, inbound_id: str):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
-    vendors = svc.get_all("VENDOR_MASTER")
     items = svc.get_all(SHEET)
     item = next((i for i in items if i["inbound_id"] == inbound_id), None)
     if not item:
         raise HTTPException(status_code=404, detail="입고 내역을 찾을 수 없습니다.")
-    return templates.TemplateResponse("inbound/form.html", {"request": request, "user": user, "item": item, "vendors": vendors, "today": today_str(), "action": "edit"})
+    orders = svc.get_all("ORDER")
+    return templates.TemplateResponse("inbound/form.html", {
+        "request": request, "user": user, "item": item,
+        "orders": orders, "today": today_str(), "action": "edit"
+    })
 
 
 @router.post("/inbound/{inbound_id}/edit")
 async def inbound_update(
     request: Request,
     inbound_id: str,
-    date: str = Form(...),
+    inbound_date: str = Form(...),
     vendor: str = Form(...),
-    material_name: str = Form(...),
-    spec: str = Form(""),
-    lot_no: str = Form(...),
-    qty: int = Form(...),
-    unit: str = Form("m"),
+    roll_no: str = Form(...),
+    order_ids: str = Form(""),
     manager: str = Form(...),
     memo: str = Form(""),
 ):
@@ -88,7 +98,10 @@ async def inbound_update(
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
-    svc.update_row(SHEET, "inbound_id", inbound_id, {"date": date, "vendor": vendor, "material_name": material_name, "spec": spec, "lot_no": lot_no, "qty": qty, "unit": unit, "manager": manager, "memo": memo})
+    svc.update_row(SHEET, "inbound_id", inbound_id, {
+        "inbound_date": inbound_date, "vendor": vendor, "roll_no": roll_no,
+        "order_ids": order_ids, "manager": manager, "memo": memo,
+    })
     return RedirectResponse(url="/inbound", status_code=303)
 
 
@@ -105,4 +118,4 @@ async def inbound_delete(request: Request, inbound_id: str):
 @router.get("/api/inbound")
 async def api_inbound_list(q: str = ""):
     svc = get_sheets_service()
-    return svc.search(SHEET, q, ["vendor", "material_name", "lot_no"]) if q else svc.get_all(SHEET)
+    return svc.search(SHEET, q, ["vendor", "roll_no"]) if q else svc.get_all(SHEET)
