@@ -20,9 +20,49 @@
     @apply bg-white rounded-2xl p-5 shadow-sm border border-gray-100;
 }
 
+/* KPI 카드 (대시보드용) */
+.kpi-card {
+    @apply bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all duration-200 hover:shadow-md hover:border-gray-200 hover:-translate-y-0.5;
+}
+.kpi-icon {
+    @apply w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0;
+}
+
+/* 공정 흐름 카드 */
+.process-card {
+    @apply relative flex flex-col gap-1 p-4 rounded-2xl text-white bg-gradient-to-br transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 no-underline overflow-hidden;
+}
+.process-card::after {
+    content: '';
+    @apply absolute -right-4 -bottom-4 w-20 h-20 rounded-full bg-white/10;
+}
+.process-step {
+    @apply text-[10px] font-bold tracking-widest text-white/80;
+}
+.process-title {
+    @apply text-sm font-bold text-white;
+}
+.process-value {
+    @apply text-2xl font-bold text-white mt-1;
+}
+.process-unit {
+    @apply text-sm font-normal text-white/80 ml-0.5;
+}
+.process-sub {
+    @apply text-xs text-white/80;
+}
+
 /* 빠른 버튼 */
 .quick-btn {
     @apply flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors duration-150 no-underline;
+}
+
+/* 빠른 액션 (대시보드 우측 패널) */
+.quick-action {
+    @apply flex items-center gap-2.5 p-3 rounded-xl border border-gray-100 bg-gray-50/60 hover:bg-white hover:border-gray-200 hover:shadow-sm transition-all duration-150 no-underline;
+}
+.quick-action-icon {
+    @apply w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0;
 }
 
 /* 테이블 */
