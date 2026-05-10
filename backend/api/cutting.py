@@ -32,7 +32,8 @@ async def cutting_new(request: Request):
     players = svc.get_all("PLAYER_MASTER")
     return templates.TemplateResponse("cutting/form.html", {
         "request": request, "user": user, "item": None,
-        "inbounds": inbounds, "orders": orders, "players": players, "action": "create"
+        "inbounds": inbounds, "orders": orders, "players": players,
+        "action": "create", "auto_manager": user["username"],
     })
 
 
@@ -50,7 +51,7 @@ async def cutting_create(
     defect_qty: int = Form(0),
     loss_qty: int = Form(0),
     status: str = Form("진행중"),
-    worker: str = Form(...),
+    manager: str = Form(...),
     memo: str = Form(""),
 ):
     user = require_auth(request)
@@ -62,7 +63,8 @@ async def cutting_create(
             "request": request, "user": user, "item": None,
             "inbounds": svc.get_all("ROLL_INBOUND"), "orders": svc.get_all("ORDER"),
             "players": svc.get_all("PLAYER_MASTER"), "action": "create",
-            "error": "성공수량은 투입수량을 초과할 수 없습니다."
+            "auto_manager": manager,
+            "error": "성공수량은 투입수량을 초과할 수 없습니다.",
         })
     svc = get_sheets_service()
     svc.append_row(SHEET, {
@@ -78,7 +80,7 @@ async def cutting_create(
         "defect_qty": defect_qty,
         "loss_qty": loss_qty,
         "status": status,
-        "worker": worker,
+        "manager": manager,
         "memo": memo,
         "created_at": now_str(),
     })
@@ -97,12 +99,16 @@ async def cutting_edit(request: Request, cutting_id: str):
     item = next((i for i in items if i["cutting_id"] == cutting_id), None)
     if not item:
         raise HTTPException(status_code=404, detail="재단 작업을 찾을 수 없습니다.")
+    # 기존 데이터에 worker 필드가 있으면 manager로 마이그레이션
+    if not item.get("manager") and item.get("worker"):
+        item["manager"] = item["worker"]
     inbounds = svc.get_all("ROLL_INBOUND")
     orders = svc.get_all("ORDER")
     players = svc.get_all("PLAYER_MASTER")
     return templates.TemplateResponse("cutting/form.html", {
         "request": request, "user": user, "item": item,
-        "inbounds": inbounds, "orders": orders, "players": players, "action": "edit"
+        "inbounds": inbounds, "orders": orders, "players": players,
+        "action": "edit", "auto_manager": item.get("manager", user["username"]),
     })
 
 
@@ -121,7 +127,7 @@ async def cutting_update(
     defect_qty: int = Form(0),
     loss_qty: int = Form(0),
     status: str = Form("진행중"),
-    worker: str = Form(...),
+    manager: str = Form(...),
     memo: str = Form(""),
 ):
     user = require_auth(request)
@@ -134,7 +140,7 @@ async def cutting_update(
         "player_name": player_name, "player_number": player_number,
         "input_qty": input_qty, "success_qty": success_qty,
         "defect_qty": defect_qty, "loss_qty": loss_qty,
-        "status": status, "worker": worker, "memo": memo,
+        "status": status, "manager": manager, "memo": memo,
     })
     if status == "완료":
         svc.update_row("ORDER", "order_id", order_id, {"status": "재단완료"})

@@ -2,6 +2,8 @@ from datetime import datetime
 from fastapi import Request, HTTPException
 from backend.auth.jwt_handler import decode_token
 
+KO_WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
+
 
 def generate_id(prefix: str) -> str:
     ts = datetime.now().strftime("%y%m%d%H%M%S%f")[:16]
@@ -14,6 +16,32 @@ def now_str() -> str:
 
 def today_str() -> str:
     return datetime.now().strftime("%Y-%m-%d")
+
+
+def day_of_week(date_str: str) -> str:
+    """'YYYY-MM-DD' 문자열을 받아 한국어 요일 반환 (예: '일요일')"""
+    try:
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+        return KO_WEEKDAYS[dt.weekday()] + "요일"
+    except Exception:
+        return ""
+
+
+def generate_roll_no(existing_rolls: list, date_str: str) -> str:
+    """당일 기준 순번 롤번호 자동 생성: R-YYYYMMDD-NNN"""
+    compact = date_str.replace("-", "")
+    prefix = f"R-{compact}-"
+    max_seq = 0
+    for r in existing_rolls:
+        rno = str(r.get("roll_no", ""))
+        if rno.startswith(prefix):
+            try:
+                seq = int(rno[len(prefix):])
+                if seq > max_seq:
+                    max_seq = seq
+            except ValueError:
+                pass
+    return f"{prefix}{max_seq + 1:03d}"
 
 
 def get_current_user(request: Request) -> dict:

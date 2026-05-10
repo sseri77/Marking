@@ -9,51 +9,140 @@
         {% endif %}
 
         <form method="post" action="{% if action == 'create' %}/inbound/new{% else %}/inbound/{{ item.inbound_id }}/edit{% endif %}">
-            <div class="grid grid-cols-1 gap-4">
+            <div class="grid grid-cols-1 gap-5">
+
+                <!-- 입고일 + 요일 -->
                 <div class="form-group">
                     <label class="form-label">입고일 *</label>
-                    <input type="date" name="inbound_date" value="{{ item.inbound_date if item else today }}" required class="form-input">
+                    <div class="flex items-center gap-3">
+                        <input type="date" name="inbound_date" id="inbound_date"
+                            value="{{ item.inbound_date if item else today }}"
+                            required class="form-input flex-1" onchange="onDateChange(this.value)">
+                        <span id="weekday-badge"
+                            class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-semibold bg-blue-50 text-blue-700 whitespace-nowrap min-w-[70px] justify-center">
+                            {% if item %}{{ item.day_of_week if item.day_of_week else today_weekday }}{% else %}{{ today_weekday }}{% endif %}
+                        </span>
+                    </div>
                 </div>
 
+                <!-- 인쇄업체 -->
                 <div class="form-group">
                     <label class="form-label">인쇄업체 *</label>
-                    <input type="text" name="vendor" value="{{ item.vendor if item else '' }}" required class="form-input" placeholder="인쇄업체명">
+                    <input type="text" name="vendor" value="{{ item.vendor if item else '' }}"
+                        required class="form-input" placeholder="인쇄업체명">
                 </div>
 
+                <!-- 롤번호 (자동생성) -->
                 <div class="form-group">
-                    <label class="form-label">롤번호 *</label>
-                    <input type="text" name="roll_no" value="{{ item.roll_no if item else '' }}" required class="form-input" placeholder="예) ROLL-20240501-001">
+                    <label class="form-label">
+                        롤번호 *
+                        <span class="text-xs text-gray-400 font-normal ml-1">시스템 자동 생성</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" name="roll_no" id="roll_no"
+                            value="{{ new_roll_no if new_roll_no else (item.roll_no if item else '') }}"
+                            required class="form-input flex-1 font-mono bg-gray-50"
+                            placeholder="R-YYYYMMDD-NNN" readonly>
+                        {% if action == 'edit' %}
+                        <button type="button" onclick="unlockRollNo()"
+                            class="px-3 py-2 text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg whitespace-nowrap">
+                            수정 허용
+                        </button>
+                        {% endif %}
+                        <button type="button" onclick="copyRollNo()"
+                            class="px-3 py-2 text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg whitespace-nowrap">
+                            복사
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">입고일 변경 시 자동으로 업데이트됩니다.</p>
                 </div>
 
-                <!-- 주문 연결 -->
+                <!-- 입고 수량 -->
                 <div class="form-group">
-                    <label class="form-label">연결 주문 (이 롤에 포함된 주문 선택)</label>
-                    <div class="border border-gray-200 rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                    <label class="form-label">실제 입고 수량 *</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="inbound_qty" id="inbound_qty"
+                            value="{{ item.inbound_qty if item else '' }}"
+                            min="1" required class="form-input w-40" placeholder="수량 입력">
+                        <span class="text-sm text-gray-400">장 (롤)</span>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">주문 수량과 다를 수 있습니다. 실제 입고된 수량을 입력하세요.</p>
+                </div>
+
+                <!-- 연결 주문 -->
+                <div class="form-group">
+                    <label class="form-label">연결 주문 <span class="text-xs text-gray-400 font-normal">(이 롤에 포함된 주문 선택)</span></label>
+                    <div class="border border-gray-200 rounded-xl overflow-hidden">
+                        <!-- 헤더 -->
+                        <div class="grid grid-cols-12 gap-2 px-3 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            <div class="col-span-1"></div>
+                            <div class="col-span-4">구단 / 선수</div>
+                            <div class="col-span-2 text-right">주문</div>
+                            <div class="col-span-2 text-right">입고</div>
+                            <div class="col-span-2 text-right">잔여</div>
+                            <div class="col-span-1 text-center">상태</div>
+                        </div>
+                        <div class="max-h-52 overflow-y-auto divide-y divide-gray-50">
                         {% if orders %}
                             {% for o in orders %}
-                            <label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded">
-                                <input type="checkbox" name="order_ids_check" value="{{ o.order_id }}"
-                                    {% if item and o.order_id in item.order_ids %}checked{% endif %}
-                                    onchange="updateOrderIds()" class="rounded">
-                                <span class="font-mono text-xs text-gray-400">{{ o.order_id }}</span>
-                                <span>{{ o.club_name }} / {{ o.player_name }} {{ o.player_number }}번</span>
-                                <span class="text-blue-600 font-semibold">{{ o.qty }}장</span>
-                                <span class="badge-gray text-xs">{{ o.status }}</span>
+                            {% set is_checked = item and o.order_id in item.order_ids %}
+                            {% set remaining = o._remaining %}
+                            {% set total_ib = o._total_inbound %}
+                            <label class="grid grid-cols-12 gap-2 px-3 py-2.5 items-center text-sm cursor-pointer hover:bg-blue-50/40 transition-colors
+                                {% if remaining == 0 %}opacity-50{% endif %}">
+                                <div class="col-span-1">
+                                    <input type="checkbox" name="order_ids_check" value="{{ o.order_id }}"
+                                        {% if is_checked %}checked{% endif %}
+                                        onchange="updateOrderIds()" class="rounded accent-blue-500">
+                                </div>
+                                <div class="col-span-4">
+                                    <div class="font-medium text-gray-800">{{ o.club_name }}</div>
+                                    <div class="text-xs text-gray-400">{{ o.player_name }} #{{ o.player_number }}</div>
+                                </div>
+                                <div class="col-span-2 text-right font-semibold text-gray-700">{{ o.qty }}장</div>
+                                <div class="col-span-2 text-right text-blue-600 font-semibold">{{ total_ib }}장</div>
+                                <div class="col-span-2 text-right {% if remaining == 0 %}text-gray-300{% else %}text-orange-500 font-semibold{% endif %}">
+                                    {{ remaining }}장
+                                </div>
+                                <div class="col-span-1 text-center">
+                                    {% if remaining == 0 %}
+                                    <span class="inline-block w-2 h-2 rounded-full bg-green-400"></span>
+                                    {% else %}
+                                    <span class="inline-block w-2 h-2 rounded-full bg-orange-400"></span>
+                                    {% endif %}
+                                </div>
                             </label>
                             {% endfor %}
                         {% else %}
-                            <p class="text-gray-400 text-sm">등록된 주문이 없습니다. 먼저 주문을 등록해주세요.</p>
+                            <div class="px-4 py-6 text-center text-gray-400 text-sm">
+                                등록된 주문이 없습니다. 먼저 주문을 등록해주세요.
+                            </div>
                         {% endif %}
+                        </div>
                     </div>
                     <input type="hidden" name="order_ids" id="order-ids-input" value="{{ item.order_ids if item else '' }}">
-                    <p class="text-xs text-gray-400 mt-1">선택된 주문: <span id="selected-orders">{{ item.order_ids if item else '없음' }}</span></p>
+                    <p class="text-xs text-gray-400 mt-1">선택된 주문: <span id="selected-orders" class="font-medium text-gray-600">{{ item.order_ids if item else '없음' }}</span></p>
                 </div>
 
+                <!-- 담당자 (자동입력) -->
                 <div class="form-group">
-                    <label class="form-label">담당자 *</label>
-                    <input type="text" name="manager" value="{{ item.manager if item else '' }}" required class="form-input" placeholder="담당자명">
+                    <label class="form-label">
+                        담당자
+                        <span class="text-xs text-gray-400 font-normal ml-1">로그인 접속자 자동 입력</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" name="manager" id="manager_field"
+                            value="{{ auto_manager }}"
+                            class="form-input flex-1 bg-gray-50" readonly>
+                        <button type="button" onclick="unlockManager()"
+                            class="px-3 py-2 text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg whitespace-nowrap">
+                            수정
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">저장 시점 기준으로 등록자 이력이 기록됩니다.</p>
                 </div>
 
+                <!-- 메모 -->
                 <div class="form-group">
                     <label class="form-label">메모</label>
                     <textarea name="memo" rows="2" class="form-input" placeholder="비고사항">{{ item.memo if item else '' }}</textarea>
@@ -61,10 +150,10 @@
             </div>
 
             <div class="flex gap-3 mt-6">
-                <button type="submit" class="btn-inbound px-6 py-2 rounded-lg">
+                <button type="submit" class="btn-inbound px-6 py-2.5 rounded-xl font-semibold">
                     {% if action == 'create' %}입고 등록{% else %}저장{% endif %}
                 </button>
-                <a href="/inbound" class="btn-secondary px-6 py-2 rounded-lg">취소</a>
+                <a href="/inbound" class="btn-secondary px-6 py-2.5 rounded-xl">취소</a>
             </div>
         </form>
     </div>
@@ -72,11 +161,54 @@
 {% endblock %}
 {% block extra_scripts %}
 <script>
+const KO_DAYS = ['일','월','화','수','목','금','토'];
+
+function onDateChange(val) {
+    // 요일 업데이트
+    if (val) {
+        const d = new Date(val + 'T00:00:00');
+        document.getElementById('weekday-badge').textContent = KO_DAYS[d.getDay()] + '요일';
+    }
+    // 롤번호 자동 업데이트 (readonly일 때만)
+    const rollField = document.getElementById('roll_no');
+    if (rollField.readOnly && val) {
+        fetch('/api/inbound/roll_no_preview?date=' + val)
+            .then(r => r.json())
+            .then(data => { rollField.value = data.roll_no; });
+    }
+}
+
 function updateOrderIds() {
     const checked = Array.from(document.querySelectorAll('input[name="order_ids_check"]:checked'))
         .map(cb => cb.value);
     document.getElementById('order-ids-input').value = checked.join(',');
     document.getElementById('selected-orders').textContent = checked.length ? checked.join(', ') : '없음';
 }
+
+function copyRollNo() {
+    const val = document.getElementById('roll_no').value;
+    navigator.clipboard.writeText(val).then(() => {
+        const btn = event.target;
+        btn.textContent = '복사됨!';
+        setTimeout(() => btn.textContent = '복사', 1500);
+    });
+}
+
+function unlockRollNo() {
+    const f = document.getElementById('roll_no');
+    f.readOnly = false;
+    f.classList.remove('bg-gray-50');
+    f.focus();
+}
+
+function unlockManager() {
+    const f = document.getElementById('manager_field');
+    f.readOnly = false;
+    f.classList.remove('bg-gray-50');
+    f.focus();
+}
+
+// 체크박스 상태 초기화
+document.addEventListener('DOMContentLoaded', updateOrderIds);
 </script>
 {% endblock %}
