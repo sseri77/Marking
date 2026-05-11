@@ -76,9 +76,9 @@
                         <!-- 헤더 -->
                         <div class="grid grid-cols-12 gap-2 px-3 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             <div class="col-span-1"></div>
-                            <div class="col-span-4">구단 / 선수</div>
+                            <div class="col-span-5">구단 / 콜라보 / 선수</div>
                             <div class="col-span-2 text-right">주문</div>
-                            <div class="col-span-2 text-right">입고</div>
+                            <div class="col-span-1 text-right">입고</div>
                             <div class="col-span-2 text-right">잔여</div>
                             <div class="col-span-1 text-center">상태</div>
                         </div>
@@ -95,12 +95,13 @@
                                         {% if is_checked %}checked{% endif %}
                                         onchange="updateOrderIds()" class="rounded accent-blue-500">
                                 </div>
-                                <div class="col-span-4">
+                                <div class="col-span-5">
                                     <div class="font-medium text-gray-800">{{ o.club_name }}</div>
+                                    <div class="text-xs text-blue-600 font-medium">{{ o.collab_name }}</div>
                                     <div class="text-xs text-gray-400">{{ o.player_name }} #{{ o.player_number }}</div>
                                 </div>
                                 <div class="col-span-2 text-right font-semibold text-gray-700">{{ o.qty }}장</div>
-                                <div class="col-span-2 text-right text-blue-600 font-semibold">{{ total_ib }}장</div>
+                                <div class="col-span-1 text-right text-blue-600 font-semibold">{{ total_ib }}장</div>
                                 <div class="col-span-2 text-right {% if remaining == 0 %}text-gray-300{% else %}text-orange-500 font-semibold{% endif %}">
                                     {{ remaining }}장
                                 </div>
@@ -122,6 +123,10 @@
                     </div>
                     <input type="hidden" name="order_ids" id="order-ids-input" value="{{ item.order_ids if item else '' }}">
                     <p class="text-xs text-gray-400 mt-1">선택된 주문: <span id="selected-orders" class="font-medium text-gray-600">{{ item.order_ids if item else '없음' }}</span></p>
+                    <div id="selected-collab-summary" class="mt-2 text-xs text-gray-500 hidden">
+                        <span class="font-semibold text-gray-600">포함 원단(콜라보):</span>
+                        <span id="selected-collabs" class="text-blue-600 font-medium"></span>
+                    </div>
                 </div>
 
                 <!-- 담당자 (자동입력) -->
@@ -179,10 +184,29 @@ function onDateChange(val) {
 }
 
 function updateOrderIds() {
-    const checked = Array.from(document.querySelectorAll('input[name="order_ids_check"]:checked'))
-        .map(cb => cb.value);
+    const checkedBoxes = Array.from(document.querySelectorAll('input[name="order_ids_check"]:checked'));
+    const checked = checkedBoxes.map(cb => cb.value);
     document.getElementById('order-ids-input').value = checked.join(',');
     document.getElementById('selected-orders').textContent = checked.length ? checked.join(', ') : '없음';
+
+    // 선택된 주문에서 콜라보(원단) 추출하여 표시
+    const collabs = Array.from(new Set(
+        checkedBoxes
+            .map(cb => {
+                const row = cb.closest('label');
+                const collabEl = row ? row.querySelector('.text-blue-600.font-medium') : null;
+                return collabEl ? collabEl.textContent.trim() : '';
+            })
+            .filter(Boolean)
+    ));
+    const summary = document.getElementById('selected-collab-summary');
+    const target = document.getElementById('selected-collabs');
+    if (collabs.length > 0) {
+        target.textContent = collabs.join(' / ');
+        summary.classList.remove('hidden');
+    } else {
+        summary.classList.add('hidden');
+    }
 }
 
 function copyRollNo() {

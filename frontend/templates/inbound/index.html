@@ -29,7 +29,7 @@
                         <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">입고일</th>
                         <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">인쇄업체</th>
                         <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">롤번호</th>
-                        <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">연결 주문</th>
+                        <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">원단(콜라보) / 주문</th>
                         <th class="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">주문수량</th>
                         <th class="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">입고수량</th>
                         <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">담당자</th>
@@ -56,9 +56,26 @@
                             <span class="font-mono text-xs bg-gray-50 border border-gray-200 px-2 py-1 rounded-lg text-gray-700">{{ item.roll_no }}</span>
                         </td>
                         <!-- 연결 주문 -->
-                        <td class="px-4 py-4 max-w-[180px]">
+                        <td class="px-4 py-4 max-w-[220px]">
                             {% if item.order_ids %}
                                 {% set order_ids_list = item.order_ids.split(',') %}
+                                {% set ns = namespace(collabs=[]) %}
+                                {% for oid in order_ids_list %}
+                                    {% set oid = oid.strip() %}
+                                    {% if oid and oid in all_orders %}
+                                        {% set o = all_orders[oid] %}
+                                        {% if o.collab_name and o.collab_name not in ns.collabs %}
+                                            {% set ns.collabs = ns.collabs + [o.collab_name] %}
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% if ns.collabs %}
+                                <div class="mb-1 flex flex-wrap gap-1">
+                                    {% for c in ns.collabs %}
+                                    <span class="inline-block text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">{{ c }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
                                 {% for oid in order_ids_list %}
                                     {% set oid = oid.strip() %}
                                     {% if oid and oid in all_orders %}
