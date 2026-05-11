@@ -28,12 +28,23 @@ SHEET_HEADERS = {
     "STORE_OUTBOUND": ["outbound_id", "cutting_id", "store_name", "club_name", "collab_name", "player_name", "player_number", "qty", "invoice_no", "shipping_date", "manager", "memo", "created_at"],
 }
 
+# 시트 스키마가 변경된 후 기존 시트의 헤더/데이터를 신규 스키마로 변환하기 위한 필드명 매핑.
+# 키: 신규 시트명, 값: {옛 필드명: 신규 필드명}. 신규 필드명이 None 이면 해당 컬럼은 제거.
+SHEET_FIELD_MIGRATIONS = {
+    "CUTTING_PROCESS": {
+        "process_id": "cutting_id",
+        "work_order_no": None,
+        "worker": "manager",
+    },
+}
+
 
 class SheetsService:
     def __init__(self):
         self._client: Optional[gspread.Client] = None
         self._spreadsheet: Optional[gspread.Spreadsheet] = None
         self._demo_mode = False
+        self._schema_checked: set[str] = set()
 
     def _try_import_gspread(self):
         global _GSPREAD_AVAILABLE
@@ -110,13 +121,63 @@ class SheetsService:
         if self._demo_mode or not self._spreadsheet:
             return None
         try:
-            return self._spreadsheet.worksheet(sheet_name)
+            ws = self._spreadsheet.worksheet(sheet_name)
         except gspread.WorksheetNotFound:
             ws = self._spreadsheet.add_worksheet(title=sheet_name, rows=1000, cols=len(SHEET_HEADERS.get(sheet_name, [])) + 2)
             headers = SHEET_HEADERS.get(sheet_name, [])
             if headers:
                 ws.append_row(headers)
+            self._schema_checked.add(sheet_name)
             return ws
+        if sheet_name not in self._schema_checked:
+            self._ensure_sheet_schema(sheet_name, ws)
+            self._schema_checked.add(sheet_name)
+        return ws
+
+    def _ensure_sheet_schema(self, sheet_name: str, sheet) -> None:
+        """시트의 헤더가 현재 SHEET_HEADERS와 일치하는지 확인하고, 다르면 자동 마이그레이션한다."""
+        expected = SHEET_HEADERS.get(sheet_name)
+        if not expected:
+            return
+        try:
+            current = sheet.row_values(1)
+        except Exception as e:
+            print(f"[Sheets] {sheet_name} 헤더 읽기 실패: {e}")
+            return
+        # 헤더가 이미 정상이면 종료
+        if current == expected:
+            return
+        # 시트가 비어 있으면 헤더만 기록
+        if not current or all(not (c or "").strip() for c in current):
+            sheet.update("A1", [expected])
+            print(f"[Sheets] {sheet_name} 헤더 초기화 완료")
+            return
+        # 헤더가 다른 경우: 기존 데이터를 옛 헤더 기준으로 읽고 새 스키마로 변환
+        print(f"[Sheets] {sheet_name} 스키마 마이그레이션 시작: {current} -> {expected}")
+        try:
+            records = sheet.get_all_records()
+        except Exception as e:
+            print(f"[Sheets] {sheet_name} 마이그레이션용 데이터 읽기 실패: {e}")
+            return
+        field_map = SHEET_FIELD_MIGRATIONS.get(sheet_name, {})
+        new_rows = []
+        for r in records:
+            new_r = {}
+            for old_key, val in r.items():
+                if old_key in field_map:
+                    new_key = field_map[old_key]
+                    if new_key is None:
+                        continue
+                else:
+                    new_key = old_key
+                new_r[new_key] = val
+            new_rows.append([str(new_r.get(h, "")) for h in expected])
+        try:
+            sheet.clear()
+            sheet.update("A1", [expected] + new_rows)
+            print(f"[Sheets] {sheet_name} 마이그레이션 완료 ({len(new_rows)}행)")
+        except Exception as e:
+            print(f"[Sheets] {sheet_name} 마이그레이션 쓰기 실패: {e}")
 
     def get_all(self, sheet_name: str) -> list[dict]:
         sheet = self._get_sheet(sheet_name)
@@ -192,8 +253,8 @@ class SheetsService:
                 {"inbound_id": "INB002", "date": "2024-05-03", "vendor": "서울텍스", "material_name": "나일론", "spec": "140cm/black", "lot_no": "LOT-240503", "qty": "300", "unit": "m", "manager": "이영희", "memo": "긴급발주", "created_at": "2024-05-03"},
             ],
             "CUTTING_PROCESS": [
-                {"process_id": "CUT001", "work_order_no": "WO-240501", "club_name": "FC서울", "collab_name": "2024 홈킷", "player_name": "황의조", "player_number": "9", "input_qty": "100", "success_qty": "95", "defect_qty": "3", "loss_qty": "2", "status": "완료", "worker": "박작업", "memo": "", "created_at": "2024-05-01"},
-                {"process_id": "CUT002", "work_order_no": "WO-240503", "club_name": "전북현대", "collab_name": "2024 어웨이킷", "player_name": "이동국", "player_number": "20", "input_qty": "80", "success_qty": "78", "defect_qty": "1", "loss_qty": "1", "status": "진행중", "worker": "최작업", "memo": "", "created_at": "2024-05-03"},
+                {"cutting_id": "CUT001", "inbound_id": "", "order_id": "", "club_name": "FC서울", "collab_name": "2024 홈킷", "player_name": "황의조", "player_number": "9", "input_qty": "100", "success_qty": "95", "defect_qty": "3", "loss_qty": "2", "status": "완료", "manager": "박작업", "memo": "", "created_at": "2024-05-01"},
+                {"cutting_id": "CUT002", "inbound_id": "", "order_id": "", "club_name": "전북현대", "collab_name": "2024 어웨이킷", "player_name": "이동국", "player_number": "20", "input_qty": "80", "success_qty": "78", "defect_qty": "1", "loss_qty": "1", "status": "진행중", "manager": "최작업", "memo": "", "created_at": "2024-05-03"},
             ],
             "STORE_OUTBOUND": [
                 {"outbound_id": "OUT001", "store_name": "강남점", "club_name": "FC서울", "collab_name": "2024 홈킷", "player_name": "황의조", "player_number": "9", "qty": "30", "invoice_no": "INV-240502", "shipping_date": "2024-05-02", "manager": "김물류", "memo": "", "created_at": "2024-05-02"},
