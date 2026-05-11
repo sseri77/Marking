@@ -23,79 +23,80 @@
     <link rel="stylesheet" href="/static/css/main.css">
     {% block extra_head %}{% endblock %}
 </head>
-<body class="h-full bg-gray-50 font-sans antialiased">
+<body class="h-full bg-gray-50">
 
 <!-- 모바일 사이드바 오버레이 -->
 <div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-20 hidden lg:hidden" onclick="toggleSidebar()"></div>
 
 <div class="flex h-full">
     <!-- 사이드바 -->
-    <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-30 w-60 bg-slate-900 text-slate-200 flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-300 border-r border-slate-800/80">
+    <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-30 w-60 bg-slate-950 text-slate-200 flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-300 border-r border-slate-800/70">
+
         <!-- 로고 -->
-        <div class="flex items-center px-5 py-4 border-b border-slate-800/80">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mr-2.5 flex-shrink-0 shadow-sm shadow-blue-500/20">
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+        <div class="flex items-center px-5 py-4 border-b border-slate-800/70">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mr-2.5 flex-shrink-0 shadow-sm shadow-blue-500/30 ring-1 ring-white/10">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="text-white">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                 </svg>
             </div>
             <div class="overflow-hidden leading-tight">
                 <div class="text-[13px] font-semibold text-white truncate tracking-tight">마킹키트 관리</div>
-                <div class="text-[10.5px] text-slate-500 mt-0.5 tracking-wide">PRODUCTION SUITE</div>
+                <div class="text-[10px] text-slate-500 mt-0.5 tracking-[0.14em] font-medium">PRODUCTION SUITE</div>
             </div>
         </div>
 
         <!-- 메뉴 -->
         <nav class="flex-1 px-3 py-3 overflow-y-auto">
             <a href="/" class="nav-item {% if request.url.path == '/' %}active{% endif %}">
-                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12 12 2.25 21.75 12M4.5 9.75v9a1.5 1.5 0 0 0 1.5 1.5h3.75v-6h4.5v6H18a1.5 1.5 0 0 0 1.5-1.5v-9"/></svg>
+                <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12 12 2.25 21.75 12M4.5 9.75v9a1.5 1.5 0 0 0 1.5 1.5h3.75v-6h4.5v6H18a1.5 1.5 0 0 0 1.5-1.5v-9"/></svg>
                 <span>대시보드</span>
             </a>
 
             <div class="nav-section">기준정보</div>
             <a href="/clubs" class="nav-item {% if '/clubs' in request.url.path %}active{% endif %}">
-                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m3 0H15M9 10.5h1.5m3 0H15m-6 3.75h1.5m3 0H15M9 18h1.5m3 0H15"/></svg>
+                <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m3 0H15M9 10.5h1.5m3 0H15m-6 3.75h1.5m3 0H15M9 18h1.5m3 0H15"/></svg>
                 <span>구단 관리</span>
             </a>
             <a href="/collabs" class="nav-item {% if '/collabs' in request.url.path %}active{% endif %}">
-                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.1 18.1 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z"/></svg>
+                <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.1 18.1 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z"/></svg>
                 <span>콜라보 관리</span>
             </a>
             <a href="/players" class="nav-item {% if '/players' in request.url.path %}active{% endif %}">
-                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.93 17.93 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
+                <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.93 17.93 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
                 <span>선수 관리</span>
             </a>
 
             <div class="nav-section">공정 관리</div>
             <a href="/orders" class="nav-item {% if '/orders' in request.url.path %}active{% endif %}">
-                <span class="nav-step" data-step="1"><span class="nav-step-dot bg-purple-400"></span></span>
+                <span class="nav-step"><span class="nav-step-dot" style="background:#c084fc"></span></span>
                 <span>주문 / 발주</span>
             </a>
             <a href="/inbound" class="nav-item {% if '/inbound' in request.url.path %}active{% endif %}">
-                <span class="nav-step" data-step="2"><span class="nav-step-dot bg-sky-400"></span></span>
+                <span class="nav-step"><span class="nav-step-dot" style="background:#38bdf8"></span></span>
                 <span>롤 원단 입고</span>
             </a>
             <a href="/cutting" class="nav-item {% if '/cutting' in request.url.path %}active{% endif %}">
-                <span class="nav-step" data-step="3"><span class="nav-step-dot bg-orange-400"></span></span>
+                <span class="nav-step"><span class="nav-step-dot" style="background:#fb923c"></span></span>
                 <span>선수별 재단</span>
             </a>
             <a href="/outbound" class="nav-item {% if '/outbound' in request.url.path %}active{% endif %}">
-                <span class="nav-step" data-step="4"><span class="nav-step-dot bg-emerald-400"></span></span>
+                <span class="nav-step"><span class="nav-step-dot" style="background:#34d399"></span></span>
                 <span>출고</span>
             </a>
 
             <div class="nav-section">도구</div>
             <a href="/search" class="nav-item {% if '/search' in request.url.path %}active{% endif %}">
-                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+                <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
                 <span>통합 검색</span>
             </a>
         </nav>
 
         <!-- 사용자 정보 -->
-        <div class="px-3 py-3 border-t border-slate-800/80">
+        <div class="px-3 py-3 border-t border-slate-800/70">
             {% if user %}
-            <div class="flex items-center justify-between gap-2 px-2 py-2 rounded-xl hover:bg-slate-800/60 transition">
+            <div class="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl hover:bg-slate-800/60 transition">
                 <div class="flex items-center min-w-0 gap-2.5">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-[13px] font-semibold text-white flex-shrink-0 shadow-sm shadow-blue-500/20">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-[12.5px] font-semibold text-white flex-shrink-0 ring-1 ring-white/10 shadow-sm shadow-blue-500/30">
                         {{ user.username[0].upper() }}
                     </div>
                     <div class="min-w-0">
@@ -103,8 +104,8 @@
                         <div class="text-[11px] text-slate-500 truncate mt-0.5">{{ user.role }}</div>
                     </div>
                 </div>
-                <a href="/logout" class="text-slate-500 hover:text-white p-1.5 rounded-lg hover:bg-slate-700/60 transition flex-shrink-0" title="로그아웃">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"/></svg>
+                <a href="/logout" class="text-slate-500 hover:text-white p-1.5 rounded-lg hover:bg-slate-800/80 transition flex-shrink-0" title="로그아웃">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"/></svg>
                 </a>
             </div>
             {% endif %}
@@ -117,7 +118,7 @@
         <header class="bg-white/80 backdrop-blur-md border-b border-gray-200/70 px-4 lg:px-6 py-3 flex items-center justify-between sticky top-0 z-10">
             <div class="flex items-center">
                 <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 mr-2 transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
                 </button>
                 <h1 class="text-[15px] font-semibold text-gray-800 tracking-tight">{% block page_title %}대시보드{% endblock %}</h1>
             </div>
@@ -126,7 +127,7 @@
                 <form action="/search" method="get" class="hidden sm:flex items-center">
                     <div class="relative">
                         <input type="text" name="q" placeholder="빠른 검색..." class="pl-9 pr-3 py-1.5 text-sm bg-gray-50 border border-gray-200/70 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 focus:bg-white transition w-52 placeholder-gray-400">
-                        <svg class="absolute left-3 top-2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="absolute left-3 top-2.5 text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
                     </div>
                 </form>
                 <div class="text-xs text-gray-500 font-medium tabular-nums" id="current-time"></div>
