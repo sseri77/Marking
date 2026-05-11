@@ -8,6 +8,16 @@
         <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{{ error }}</div>
         {% endif %}
 
+        {% if is_locked %}
+        <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm flex items-start gap-2">
+            <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            <div>
+                <div class="font-semibold">이 입고는 재단에서 이미 사용 중입니다.</div>
+                <div class="text-xs mt-0.5">데이터 무결성을 위해 입고일·인쇄업체·롤번호·수량·연결 주문은 변경할 수 없습니다. 메모와 담당자만 수정 가능합니다.</div>
+            </div>
+        </div>
+        {% endif %}
+
         <form method="post" action="{% if action == 'create' %}/inbound/new{% else %}/inbound/{{ item.inbound_id }}/edit{% endif %}">
             <div class="grid grid-cols-1 gap-5">
 
@@ -17,7 +27,9 @@
                     <div class="flex items-center gap-3">
                         <input type="date" name="inbound_date" id="inbound_date"
                             value="{{ item.inbound_date if item else today }}"
-                            required class="form-input flex-1" onchange="onDateChange(this.value)">
+                            required class="form-input flex-1 {% if is_locked %}bg-gray-50 cursor-not-allowed{% endif %}"
+                            onchange="onDateChange(this.value)"
+                            {% if is_locked %}readonly{% endif %}>
                         <span id="weekday-badge"
                             class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-semibold bg-blue-50 text-blue-700 whitespace-nowrap min-w-[70px] justify-center">
                             {% if item %}{{ item.day_of_week if item.day_of_week else today_weekday }}{% else %}{{ today_weekday }}{% endif %}
@@ -29,7 +41,8 @@
                 <div class="form-group">
                     <label class="form-label">인쇄업체 *</label>
                     <input type="text" name="vendor" value="{{ item.vendor if item else '' }}"
-                        required class="form-input" placeholder="인쇄업체명">
+                        required class="form-input {% if is_locked %}bg-gray-50 cursor-not-allowed{% endif %}"
+                        placeholder="인쇄업체명" {% if is_locked %}readonly{% endif %}>
                 </div>
 
                 <!-- 롤번호 (자동생성) -->
@@ -43,7 +56,7 @@
                             value="{{ new_roll_no if new_roll_no else (item.roll_no if item else '') }}"
                             required class="form-input flex-1 font-mono bg-gray-50"
                             placeholder="R-YYYYMMDD-NNN" readonly>
-                        {% if action == 'edit' %}
+                        {% if action == 'edit' and not is_locked %}
                         <button type="button" onclick="unlockRollNo()"
                             class="px-3 py-2 text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg whitespace-nowrap">
                             수정 허용
@@ -63,7 +76,9 @@
                     <div class="flex items-center gap-2">
                         <input type="number" name="inbound_qty" id="inbound_qty"
                             value="{{ item.inbound_qty if item else '' }}"
-                            min="1" required class="form-input w-40" placeholder="수량 입력">
+                            min="1" required
+                            class="form-input w-40 {% if is_locked %}bg-gray-50 cursor-not-allowed{% endif %}"
+                            placeholder="수량 입력" {% if is_locked %}readonly{% endif %}>
                         <span class="text-sm text-gray-400">장 (롤)</span>
                     </div>
                     <p class="text-xs text-gray-400 mt-1">주문 수량과 다를 수 있습니다. 실제 입고된 수량을 입력하세요.</p>
@@ -76,9 +91,9 @@
                         <!-- 헤더 -->
                         <div class="grid grid-cols-12 gap-2 px-3 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             <div class="col-span-1"></div>
-                            <div class="col-span-4">구단 / 선수</div>
+                            <div class="col-span-5">구단 / 콜라보 / 선수</div>
                             <div class="col-span-2 text-right">주문</div>
-                            <div class="col-span-2 text-right">입고</div>
+                            <div class="col-span-1 text-right">입고</div>
                             <div class="col-span-2 text-right">잔여</div>
                             <div class="col-span-1 text-center">상태</div>
                         </div>
@@ -93,14 +108,16 @@
                                 <div class="col-span-1">
                                     <input type="checkbox" name="order_ids_check" value="{{ o.order_id }}"
                                         {% if is_checked %}checked{% endif %}
+                                        {% if is_locked %}disabled{% endif %}
                                         onchange="updateOrderIds()" class="rounded accent-blue-500">
                                 </div>
-                                <div class="col-span-4">
+                                <div class="col-span-5">
                                     <div class="font-medium text-gray-800">{{ o.club_name }}</div>
+                                    <div class="text-xs text-blue-600 font-medium">{{ o.collab_name }}</div>
                                     <div class="text-xs text-gray-400">{{ o.player_name }} #{{ o.player_number }}</div>
                                 </div>
                                 <div class="col-span-2 text-right font-semibold text-gray-700">{{ o.qty }}장</div>
-                                <div class="col-span-2 text-right text-blue-600 font-semibold">{{ total_ib }}장</div>
+                                <div class="col-span-1 text-right text-blue-600 font-semibold">{{ total_ib }}장</div>
                                 <div class="col-span-2 text-right {% if remaining == 0 %}text-gray-300{% else %}text-orange-500 font-semibold{% endif %}">
                                     {{ remaining }}장
                                 </div>
@@ -122,6 +139,10 @@
                     </div>
                     <input type="hidden" name="order_ids" id="order-ids-input" value="{{ item.order_ids if item else '' }}">
                     <p class="text-xs text-gray-400 mt-1">선택된 주문: <span id="selected-orders" class="font-medium text-gray-600">{{ item.order_ids if item else '없음' }}</span></p>
+                    <div id="selected-collab-summary" class="mt-2 text-xs text-gray-500 hidden">
+                        <span class="font-semibold text-gray-600">포함 원단(콜라보):</span>
+                        <span id="selected-collabs" class="text-blue-600 font-medium"></span>
+                    </div>
                 </div>
 
                 <!-- 담당자 (자동입력) -->
@@ -179,10 +200,29 @@ function onDateChange(val) {
 }
 
 function updateOrderIds() {
-    const checked = Array.from(document.querySelectorAll('input[name="order_ids_check"]:checked'))
-        .map(cb => cb.value);
+    const checkedBoxes = Array.from(document.querySelectorAll('input[name="order_ids_check"]:checked'));
+    const checked = checkedBoxes.map(cb => cb.value);
     document.getElementById('order-ids-input').value = checked.join(',');
     document.getElementById('selected-orders').textContent = checked.length ? checked.join(', ') : '없음';
+
+    // 선택된 주문에서 콜라보(원단) 추출하여 표시
+    const collabs = Array.from(new Set(
+        checkedBoxes
+            .map(cb => {
+                const row = cb.closest('label');
+                const collabEl = row ? row.querySelector('.text-blue-600.font-medium') : null;
+                return collabEl ? collabEl.textContent.trim() : '';
+            })
+            .filter(Boolean)
+    ));
+    const summary = document.getElementById('selected-collab-summary');
+    const target = document.getElementById('selected-collabs');
+    if (collabs.length > 0) {
+        target.textContent = collabs.join(' / ');
+        summary.classList.remove('hidden');
+    } else {
+        summary.classList.add('hidden');
+    }
 }
 
 function copyRollNo() {
