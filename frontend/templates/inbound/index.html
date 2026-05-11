@@ -4,6 +4,13 @@
 {% block content %}
 <div class="space-y-4">
 
+    {% if error_message %}
+    <div class="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-start gap-2">
+        <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M4.93 19h14.14a2 2 0 001.74-3l-7.07-12.25a2 2 0 00-3.48 0L3.19 16a2 2 0 001.74 3z"/></svg>
+        <span>{{ error_message }}</span>
+    </div>
+    {% endif %}
+
     <!-- 검색 + 등록 버튼 -->
     <div class="flex flex-col sm:flex-row gap-3 justify-between">
         <form method="get" class="flex gap-2 flex-1">
@@ -126,14 +133,24 @@
                         </td>
                         <!-- 관리 버튼 -->
                         <td class="px-4 py-4">
+                            {% set is_locked = item.inbound_id in locked_inbound_ids %}
                             <div class="flex items-center justify-center gap-2">
                                 <a href="/inbound/{{ item.inbound_id }}/edit"
                                     class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">수정</a>
+                                {% if is_locked %}
+                                <button type="button" disabled
+                                    title="재단에 사용된 입고는 삭제할 수 없습니다."
+                                    class="px-3 py-1.5 text-xs font-medium text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                    잠김
+                                </button>
+                                {% else %}
                                 <form method="post" action="/inbound/{{ item.inbound_id }}/delete"
                                     onsubmit="return confirm('삭제 시 연결된 주문 상태도 재계산됩니다. 삭제하시겠습니까?')">
                                     <button type="submit"
                                         class="px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">삭제</button>
                                 </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

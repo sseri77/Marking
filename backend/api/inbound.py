@@ -30,8 +30,14 @@ def _resolve_order_status(order_qty: int, total_inbound: int) -> str:
     return "입고진행중"
 
 
+def _get_locked_inbound_ids(svc) -> set[str]:
+    """재단(CUTTING_PROCESS)에서 참조 중인 inbound_id 집합. 잠금 대상 식별용."""
+    cuttings = svc.get_all("CUTTING_PROCESS")
+    return {c.get("inbound_id") for c in cuttings if c.get("inbound_id")}
+
+
 @router.get("/inbound", response_class=HTMLResponse)
-async def inbound_list(request: Request, q: str = "", page: int = 1):
+async def inbound_list(request: Request, q: str = "", page: int = 1, error: str = ""):
     user = require_auth(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
@@ -43,11 +49,18 @@ async def inbound_list(request: Request, q: str = "", page: int = 1):
     all_orders = {o["order_id"]: o for o in svc.get_all("ORDER")}
     all_inbound = svc.get_all(SHEET)
     order_totals = _compute_order_inbound_totals(all_inbound)
+    locked_inbound_ids = _get_locked_inbound_ids(svc)
+
+    error_message = ""
+    if error == "delete_locked":
+        error_message = "재단에 사용된 입고 롤은 삭제할 수 없습니다. 먼저 관련 재단 기록을 삭제하세요."
 
     paged = paginate(data, page)
     return templates.TemplateResponse("inbound/index.html", {
         "request": request, "user": user, "q": q,
         "all_orders": all_orders, "order_totals": order_totals,
+        "locked_inbound_ids": locked_inbound_ids,
+        "error_message": error_message,
         **paged,
     })
 
@@ -202,6 +215,7 @@ async def inbound_edit(request: Request, inbound_id: str):
         "new_roll_no": item.get("roll_no", ""),
         "auto_manager": item.get("manager", user["username"]),
         "today_weekday": day_of_week(item.get("inbound_date", today_str())),
+        "is_locked": inbound_id in _get_locked_inbound_ids(svc),
     })
 
 
@@ -209,11 +223,11 @@ async def inbound_edit(request: Request, inbound_id: str):
 async def inbound_update(
     request: Request,
     inbound_id: str,
-    inbound_date: str = Form(...),
-    vendor: str = Form(...),
-    roll_no: str = Form(...),
+    inbound_date: str = Form(""),
+    vendor: str = Form(""),
+    roll_no: str = Form(""),
     order_ids: str = Form(""),
-    inbound_qty: int = Form(...),
+    inbound_qty: int = Form(0),
     manager: str = Form(...),
     memo: str = Form(""),
 ):
@@ -221,11 +235,24 @@ async def inbound_update(
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
+
+    # 재단에 사용된 입고는 핵심 필드 변경 차단 (메모/담당자만 허용)
+    is_locked = inbound_id in _get_locked_inbound_ids(svc)
+    if is_locked:
+        existing = next((r for r in svc.get_all(SHEET) if r.get("inbound_id") == inbound_id), None)
+        if not existing:
+            raise HTTPException(status_code=404, detail="입고 내역을 찾을 수 없습니다.")
+        inbound_date = existing.get("inbound_date", "")
+        vendor = existing.get("vendor", "")
+        roll_no = existing.get("roll_no", "")
+        order_ids = existing.get("order_ids", "")
+        inbound_qty = int(existing.get("inbound_qty", 0) or 0)
+
     dow = day_of_week(inbound_date)
 
-    # 롤번호 중복 검사 (자신 제외)
+    # 롤번호 중복 검사 (자신 제외) — 잠금 상태에서는 변경 없으므로 스킵
     all_rows = svc.get_all(SHEET)
-    if any(r.get("roll_no") == roll_no and r.get("inbound_id") != inbound_id for r in all_rows):
+    if not is_locked and any(r.get("roll_no") == roll_no and r.get("inbound_id") != inbound_id for r in all_rows):
         item = next((r for r in all_rows if r["inbound_id"] == inbound_id), None)
         return templates.TemplateResponse("inbound/form.html", {
             "request": request, "user": user, "item": item,
@@ -233,28 +260,32 @@ async def inbound_update(
             "new_roll_no": roll_no, "auto_manager": manager,
             "today_weekday": dow,
             "error": f"롤번호 '{roll_no}' 는 이미 사용 중입니다.",
+            "is_locked": is_locked,
         }, status_code=400)
 
     order_id_list = [o.strip() for o in order_ids.split(",") if o.strip()]
     all_orders = {o["order_id"]: o for o in svc.get_all("ORDER")}
     order_qty_total = sum(int(all_orders[oid].get("qty", 0) or 0) for oid in order_id_list if oid in all_orders)
 
-    svc.update_row(SHEET, "inbound_id", inbound_id, {
-        "inbound_date": inbound_date, "day_of_week": dow, "vendor": vendor,
-        "roll_no": roll_no, "order_ids": order_ids,
-        "order_qty": order_qty_total, "inbound_qty": inbound_qty,
-        "manager": manager, "memo": memo,
-    })
+    update_data = {"manager": manager, "memo": memo}
+    if not is_locked:
+        update_data.update({
+            "inbound_date": inbound_date, "day_of_week": dow, "vendor": vendor,
+            "roll_no": roll_no, "order_ids": order_ids,
+            "order_qty": order_qty_total, "inbound_qty": inbound_qty,
+        })
+    svc.update_row(SHEET, "inbound_id", inbound_id, update_data)
 
-    # 수정 후 주문 상태 재계산
-    all_inbound_after = svc.get_all(SHEET)
-    new_order_totals = _compute_order_inbound_totals(all_inbound_after)
-    for oid in order_id_list:
-        if oid not in all_orders:
-            continue
-        o_qty = int(all_orders[oid].get("qty", 0) or 0)
-        new_status = _resolve_order_status(o_qty, new_order_totals.get(oid, 0))
-        svc.update_row("ORDER", "order_id", oid, {"status": new_status})
+    # 수정 후 주문 상태 재계산 (잠금 상태에서는 연결 주문이 변하지 않으므로 스킵)
+    if not is_locked:
+        all_inbound_after = svc.get_all(SHEET)
+        new_order_totals = _compute_order_inbound_totals(all_inbound_after)
+        for oid in order_id_list:
+            if oid not in all_orders:
+                continue
+            o_qty = int(all_orders[oid].get("qty", 0) or 0)
+            new_status = _resolve_order_status(o_qty, new_order_totals.get(oid, 0))
+            svc.update_row("ORDER", "order_id", oid, {"status": new_status})
 
     return RedirectResponse(url="/inbound", status_code=303)
 
@@ -265,6 +296,10 @@ async def inbound_delete(request: Request, inbound_id: str):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
+
+    # 재단에 사용된 입고는 삭제 차단
+    if inbound_id in _get_locked_inbound_ids(svc):
+        return RedirectResponse(url="/inbound?error=delete_locked", status_code=303)
 
     # 삭제 전 연결 주문 목록 저장
     all_rows = svc.get_all(SHEET)

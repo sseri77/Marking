@@ -8,6 +8,16 @@
         <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{{ error }}</div>
         {% endif %}
 
+        {% if is_locked %}
+        <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm flex items-start gap-2">
+            <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            <div>
+                <div class="font-semibold">이 입고는 재단에서 이미 사용 중입니다.</div>
+                <div class="text-xs mt-0.5">데이터 무결성을 위해 입고일·인쇄업체·롤번호·수량·연결 주문은 변경할 수 없습니다. 메모와 담당자만 수정 가능합니다.</div>
+            </div>
+        </div>
+        {% endif %}
+
         <form method="post" action="{% if action == 'create' %}/inbound/new{% else %}/inbound/{{ item.inbound_id }}/edit{% endif %}">
             <div class="grid grid-cols-1 gap-5">
 
@@ -17,7 +27,9 @@
                     <div class="flex items-center gap-3">
                         <input type="date" name="inbound_date" id="inbound_date"
                             value="{{ item.inbound_date if item else today }}"
-                            required class="form-input flex-1" onchange="onDateChange(this.value)">
+                            required class="form-input flex-1 {% if is_locked %}bg-gray-50 cursor-not-allowed{% endif %}"
+                            onchange="onDateChange(this.value)"
+                            {% if is_locked %}readonly{% endif %}>
                         <span id="weekday-badge"
                             class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-semibold bg-blue-50 text-blue-700 whitespace-nowrap min-w-[70px] justify-center">
                             {% if item %}{{ item.day_of_week if item.day_of_week else today_weekday }}{% else %}{{ today_weekday }}{% endif %}
@@ -29,7 +41,8 @@
                 <div class="form-group">
                     <label class="form-label">인쇄업체 *</label>
                     <input type="text" name="vendor" value="{{ item.vendor if item else '' }}"
-                        required class="form-input" placeholder="인쇄업체명">
+                        required class="form-input {% if is_locked %}bg-gray-50 cursor-not-allowed{% endif %}"
+                        placeholder="인쇄업체명" {% if is_locked %}readonly{% endif %}>
                 </div>
 
                 <!-- 롤번호 (자동생성) -->
@@ -43,7 +56,7 @@
                             value="{{ new_roll_no if new_roll_no else (item.roll_no if item else '') }}"
                             required class="form-input flex-1 font-mono bg-gray-50"
                             placeholder="R-YYYYMMDD-NNN" readonly>
-                        {% if action == 'edit' %}
+                        {% if action == 'edit' and not is_locked %}
                         <button type="button" onclick="unlockRollNo()"
                             class="px-3 py-2 text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg whitespace-nowrap">
                             수정 허용
@@ -63,7 +76,9 @@
                     <div class="flex items-center gap-2">
                         <input type="number" name="inbound_qty" id="inbound_qty"
                             value="{{ item.inbound_qty if item else '' }}"
-                            min="1" required class="form-input w-40" placeholder="수량 입력">
+                            min="1" required
+                            class="form-input w-40 {% if is_locked %}bg-gray-50 cursor-not-allowed{% endif %}"
+                            placeholder="수량 입력" {% if is_locked %}readonly{% endif %}>
                         <span class="text-sm text-gray-400">장 (롤)</span>
                     </div>
                     <p class="text-xs text-gray-400 mt-1">주문 수량과 다를 수 있습니다. 실제 입고된 수량을 입력하세요.</p>
@@ -93,6 +108,7 @@
                                 <div class="col-span-1">
                                     <input type="checkbox" name="order_ids_check" value="{{ o.order_id }}"
                                         {% if is_checked %}checked{% endif %}
+                                        {% if is_locked %}disabled{% endif %}
                                         onchange="updateOrderIds()" class="rounded accent-blue-500">
                                 </div>
                                 <div class="col-span-5">

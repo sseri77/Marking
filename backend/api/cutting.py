@@ -9,16 +9,44 @@ templates = Jinja2Templates(directory="frontend/templates")
 SHEET = "CUTTING_PROCESS"
 
 
+def _cutting_identity_key(row: dict) -> tuple:
+    """재단↔출고 연결용 식별 키. STORE_OUTBOUND 에 cutting_id 컬럼이 없으므로
+    구단/콜라보/선수/등번호 조합으로 매칭한다."""
+    return (
+        (row.get("club_name") or "").strip(),
+        (row.get("collab_name") or "").strip(),
+        (row.get("player_name") or "").strip(),
+        str(row.get("player_number") or "").strip(),
+    )
+
+
+def _get_locked_cutting_ids(svc) -> set[str]:
+    """출고(STORE_OUTBOUND)에 동일 선수 식별자로 기록이 있는 재단의 cutting_id 집합."""
+    outbounds = svc.get_all("STORE_OUTBOUND")
+    outbound_keys = {_cutting_identity_key(o) for o in outbounds}
+    cuttings = svc.get_all(SHEET)
+    return {c.get("cutting_id") for c in cuttings if _cutting_identity_key(c) in outbound_keys and c.get("cutting_id")}
+
+
 @router.get("/cutting", response_class=HTMLResponse)
-async def cutting_list(request: Request, q: str = "", page: int = 1):
+async def cutting_list(request: Request, q: str = "", page: int = 1, error: str = ""):
     user = require_auth(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
     data = svc.search(SHEET, q, ["club_name", "player_name", "player_number", "inbound_id"]) if q else svc.get_all(SHEET)
     data = sorted(data, key=lambda x: x.get("created_at", ""), reverse=True)
+    locked_cutting_ids = _get_locked_cutting_ids(svc)
+    error_message = ""
+    if error == "delete_locked":
+        error_message = "출고에 사용된 재단 기록은 삭제할 수 없습니다. 먼저 관련 출고 기록을 삭제하세요."
     paged = paginate(data, page)
-    return templates.TemplateResponse("cutting/index.html", {"request": request, "user": user, "q": q, **paged})
+    return templates.TemplateResponse("cutting/index.html", {
+        "request": request, "user": user, "q": q,
+        "locked_cutting_ids": locked_cutting_ids,
+        "error_message": error_message,
+        **paged,
+    })
 
 
 @router.get("/cutting/new", response_class=HTMLResponse)
@@ -153,6 +181,9 @@ async def cutting_delete(request: Request, cutting_id: str):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
+    # 출고에 사용된 재단은 삭제 차단
+    if cutting_id in _get_locked_cutting_ids(svc):
+        return RedirectResponse(url="/cutting?error=delete_locked", status_code=303)
     svc.delete_row(SHEET, "cutting_id", cutting_id)
     return RedirectResponse(url="/cutting", status_code=303)
 
