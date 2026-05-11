@@ -25,7 +25,7 @@ SHEET_HEADERS = {
     # 선수별 재단
     "CUTTING_PROCESS": ["cutting_id", "inbound_id", "order_id", "club_name", "collab_name", "player_name", "player_number", "input_qty", "success_qty", "defect_qty", "loss_qty", "status", "manager", "memo", "created_at"],
     # 출고
-    "STORE_OUTBOUND": ["outbound_id", "cutting_id", "store_name", "club_name", "collab_name", "player_name", "player_number", "qty", "invoice_no", "shipping_date", "manager", "memo", "created_at"],
+    "STORE_OUTBOUND": ["outbound_id", "store_name", "club_name", "collab_name", "player_name", "player_number", "qty", "invoice_no", "shipping_date", "manager", "memo", "created_at"],
 }
 
 # 시트 스키마가 변경된 후 기존 시트의 헤더/데이터를 신규 스키마로 변환하기 위한 필드명 매핑.
