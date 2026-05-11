@@ -1,18 +1,30 @@
 /* 사이드바 네비게이션 */
 .nav-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition-all duration-150 mb-0.5 cursor-pointer no-underline;
+    @apply relative flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium text-slate-400 hover:bg-slate-800/70 hover:text-white transition-colors duration-150 mb-0.5 cursor-pointer no-underline;
 }
 .nav-item.active {
-    @apply bg-blue-600 text-white;
+    @apply bg-slate-800 text-white;
+}
+.nav-item.active::before {
+    content: '';
+    @apply absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-blue-500;
 }
 .nav-icon {
-    @apply w-4 h-4 flex-shrink-0;
+    @apply w-[18px] h-[18px] flex-shrink-0 opacity-80;
 }
-.nav-dot {
-    @apply w-2 h-2 rounded-full flex-shrink-0;
+.nav-item:hover .nav-icon,
+.nav-item.active .nav-icon {
+    @apply opacity-100;
+}
+.nav-step {
+    @apply w-[18px] h-[18px] flex items-center justify-center flex-shrink-0;
+}
+.nav-step-dot {
+    @apply w-1.5 h-1.5 rounded-full;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.04);
 }
 .nav-section {
-    @apply text-xs font-medium text-gray-500 uppercase tracking-wider px-3 pt-4 pb-1 mt-2;
+    @apply text-[10.5px] font-semibold text-slate-500 uppercase tracking-[0.12em] px-2.5 pt-5 pb-1.5;
 }
 
 /* 통계 카드 */
@@ -25,7 +37,7 @@
     @apply bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all duration-200 hover:shadow-md hover:border-gray-200 hover:-translate-y-0.5;
 }
 .kpi-icon {
-    @apply w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0;
+    @apply w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0;
 }
 
 /* 공정 흐름 카드 */
@@ -34,22 +46,26 @@
 }
 .process-card::after {
     content: '';
-    @apply absolute -right-4 -bottom-4 w-20 h-20 rounded-full bg-white/10;
+    @apply absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-white/[0.08];
+}
+.process-card::before {
+    content: '';
+    @apply absolute right-3 top-3 w-1.5 h-1.5 rounded-full bg-white/40;
 }
 .process-step {
-    @apply text-[10px] font-bold tracking-widest text-white/80;
+    @apply text-[10px] font-semibold tracking-[0.18em] text-white/70;
 }
 .process-title {
-    @apply text-sm font-bold text-white;
+    @apply text-[13px] font-semibold text-white;
 }
 .process-value {
-    @apply text-2xl font-bold text-white mt-1;
+    @apply text-2xl font-bold text-white mt-1 tracking-tight;
 }
 .process-unit {
-    @apply text-sm font-normal text-white/80 ml-0.5;
+    @apply text-sm font-normal text-white/70 ml-0.5;
 }
 .process-sub {
-    @apply text-xs text-white/80;
+    @apply text-[11px] text-white/70;
 }
 
 /* 빠른 버튼 */
@@ -59,10 +75,10 @@
 
 /* 빠른 액션 (대시보드 우측 패널) */
 .quick-action {
-    @apply flex items-center gap-2.5 p-3 rounded-xl border border-gray-100 bg-gray-50/60 hover:bg-white hover:border-gray-200 hover:shadow-sm transition-all duration-150 no-underline;
+    @apply flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-gray-100 bg-gray-50/60 hover:bg-white hover:border-gray-200 hover:shadow-sm transition-all duration-150 no-underline;
 }
 .quick-action-icon {
-    @apply w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0;
+    @apply w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0;
 }
 
 /* 테이블 */
