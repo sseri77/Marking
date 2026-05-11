@@ -9,23 +9,10 @@ templates = Jinja2Templates(directory="frontend/templates")
 SHEET = "CUTTING_PROCESS"
 
 
-def _cutting_identity_key(row: dict) -> tuple:
-    """재단↔출고 연결용 식별 키. STORE_OUTBOUND 에 cutting_id 컬럼이 없으므로
-    구단/콜라보/선수/등번호 조합으로 매칭한다."""
-    return (
-        (row.get("club_name") or "").strip(),
-        (row.get("collab_name") or "").strip(),
-        (row.get("player_name") or "").strip(),
-        str(row.get("player_number") or "").strip(),
-    )
-
-
 def _get_locked_cutting_ids(svc) -> set[str]:
-    """출고(STORE_OUTBOUND)에 동일 선수 식별자로 기록이 있는 재단의 cutting_id 집합."""
+    """출고(STORE_OUTBOUND)의 cutting_id 로 참조 중인 재단 cutting_id 집합."""
     outbounds = svc.get_all("STORE_OUTBOUND")
-    outbound_keys = {_cutting_identity_key(o) for o in outbounds}
-    cuttings = svc.get_all(SHEET)
-    return {c.get("cutting_id") for c in cuttings if _cutting_identity_key(c) in outbound_keys and c.get("cutting_id")}
+    return {(o.get("cutting_id") or "").strip() for o in outbounds if (o.get("cutting_id") or "").strip()}
 
 
 @router.get("/cutting", response_class=HTMLResponse)

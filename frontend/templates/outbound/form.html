@@ -1,12 +1,57 @@
 {% extends "base.html" %}
 {% block title %}{% if action == 'create' %}출고 등록{% else %}출고 수정{% endif %}{% endblock %}
-{% block page_title %}{% if action == 'create' %}출고 등록{% else %}출고 수정{% endif %}{% endblock %}
+{% block page_title %}{% if action == 'create' %}④ 출고 등록{% else %}출고 수정{% endif %}{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl">
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         {% if error %}<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{{ error }}</div>{% endif %}
         <form action="/outbound/{% if action == 'edit' %}{{ item.outbound_id }}/edit{% else %}new{% endif %}" method="post" class="space-y-5">
+
+            <!-- 재단 선택 -->
+            <div class="form-group">
+                <label class="form-label">재단 선택 <span class="text-red-500">*</span></label>
+                <select name="cutting_id" id="cutting-select" {% if action == 'create' %}required{% endif %}
+                    class="form-select" onchange="onCuttingChange()">
+                    <option value="">재단 기록 선택</option>
+                    {% for c in cuttings %}
+                    <option value="{{ c.cutting_id }}"
+                        data-club="{{ c.club_name }}"
+                        data-collab="{{ c.collab_name }}"
+                        data-player="{{ c.player_name }}"
+                        data-number="{{ c.player_number }}"
+                        data-remaining="{{ c.remaining }}"
+                        {% if item and item.cutting_id == c.cutting_id %}selected{% endif %}>
+                        {{ c.club_name }} / {{ c.collab_name }} / {{ c.player_name }} #{{ c.player_number }}
+                        (성공 {{ c.success_qty }}장, 출고 {{ c.outbound_qty }}장, 잔여 {{ c.remaining }}장)
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if item and not item.cutting_id %}
+                <p class="text-xs text-amber-600 mt-1">이 출고는 재단 기록과 연결되어 있지 않습니다. 위에서 선택해 주세요.</p>
+                {% endif %}
+            </div>
+
+            <!-- 자동 입력 정보 (읽기 전용 표시) -->
+            <div class="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div>
+                    <div class="text-xs text-gray-400 mb-0.5">구단</div>
+                    <div id="info-club" class="text-sm font-medium text-gray-700">{{ item.club_name if item else '-' }}</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-400 mb-0.5">콜라보 (원단)</div>
+                    <div id="info-collab" class="text-sm font-medium text-blue-600">{{ item.collab_name if item else '-' }}</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-400 mb-0.5">선수</div>
+                    <div id="info-player" class="text-sm font-medium text-gray-700">{{ item.player_name if item else '-' }}</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-400 mb-0.5">등번호</div>
+                    <div id="info-number" class="text-sm font-medium text-gray-700">{{ item.player_number if item else '-' }}</div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-2 gap-4">
                 <div class="form-group">
                     <label class="form-label">출고일 <span class="text-red-500">*</span></label>
@@ -17,52 +62,22 @@
                     <input type="text" name="store_name" required value="{{ item.store_name if item else '' }}" class="form-input" placeholder="예: 강남점">
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div class="form-group">
-                    <label class="form-label">구단 <span class="text-red-500">*</span></label>
-                    <select name="club_name" required class="form-select">
-                        <option value="">선택</option>
-                        {% for club in clubs %}
-                        <option value="{{ club.club_name }}" {% if item and item.club_name == club.club_name %}selected{% endif %}>{{ club.club_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">콜라보 <span class="text-red-500">*</span></label>
-                    <select name="collab_name" required class="form-select">
-                        <option value="">선택</option>
-                        {% for c in collabs %}
-                        <option value="{{ c.collab_name }}" {% if item and item.collab_name == c.collab_name %}selected{% endif %}>{{ c.collab_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div class="form-group">
-                    <label class="form-label">선수명 <span class="text-red-500">*</span></label>
-                    <input type="text" name="player_name" required value="{{ item.player_name if item else '' }}" class="form-input" placeholder="선수명" list="player-list">
-                    <datalist id="player-list">
-                        {% for p in players %}<option value="{{ p.player_name }}">{% endfor %}
-                    </datalist>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">등번호 <span class="text-red-500">*</span></label>
-                    <input type="text" name="player_number" required value="{{ item.player_number if item else '' }}" class="form-input" placeholder="10" inputmode="numeric">
-                </div>
-            </div>
+
             <div class="grid grid-cols-2 gap-4">
                 <div class="form-group">
                     <label class="form-label">수량 <span class="text-red-500">*</span></label>
                     <input type="number" name="qty" required min="1" value="{{ item.qty if item else '' }}" class="form-input" inputmode="numeric">
+                    <p id="qty-hint" class="text-xs text-gray-400 mt-1"></p>
                 </div>
                 <div class="form-group">
                     <label class="form-label">송장번호 <span class="text-red-500">*</span></label>
                     <input type="text" name="invoice_no" required value="{{ item.invoice_no if item else '' }}" class="form-input" placeholder="INV-240501">
                 </div>
             </div>
+
             <div class="form-group">
                 <label class="form-label">담당자 <span class="text-red-500">*</span></label>
-                <input type="text" name="manager" required value="{{ item.manager if item else '' }}" class="form-input" placeholder="담당자명">
+                <input type="text" name="manager" required value="{{ auto_manager }}" class="form-input" placeholder="담당자명">
             </div>
             <div class="form-group">
                 <label class="form-label">메모</label>
@@ -75,4 +90,30 @@
         </form>
     </div>
 </div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+function onCuttingChange() {
+    const sel = document.getElementById('cutting-select');
+    const opt = sel.options[sel.selectedIndex];
+    const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '-'; };
+    if (opt && opt.value) {
+        setText('info-club', opt.dataset.club);
+        setText('info-collab', opt.dataset.collab);
+        setText('info-player', opt.dataset.player);
+        setText('info-number', opt.dataset.number);
+        const remaining = parseInt(opt.dataset.remaining || '0', 10);
+        const hint = document.getElementById('qty-hint');
+        if (hint) hint.textContent = '재단 잔여 ' + remaining + '장까지 출고 가능';
+    } else {
+        setText('info-club', '-');
+        setText('info-collab', '-');
+        setText('info-player', '-');
+        setText('info-number', '-');
+        const hint = document.getElementById('qty-hint');
+        if (hint) hint.textContent = '';
+    }
+}
+document.addEventListener('DOMContentLoaded', onCuttingChange);
+</script>
 {% endblock %}
