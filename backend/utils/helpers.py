@@ -28,19 +28,26 @@ def day_of_week(date_str: str) -> str:
 
 
 def generate_roll_no(existing_rolls: list, date_str: str) -> str:
-    """당일 기준 순번 롤번호 자동 생성: R-YYYYMMDD-NNN"""
+    """당일 기준 순번 입고 번호 자동 생성: S-YYYYMMDD-NNN (장 단위 모델).
+
+    옛 'R-YYYYMMDD-' 접두사 데이터도 동일 일자 순번 계산에 포함하여
+    기존 시퀀스를 이어받는다.
+    """
     compact = date_str.replace("-", "")
-    prefix = f"R-{compact}-"
+    prefix = f"S-{compact}-"
+    legacy_prefix = f"R-{compact}-"
     max_seq = 0
     for r in existing_rolls:
         rno = str(r.get("roll_no", ""))
-        if rno.startswith(prefix):
-            try:
-                seq = int(rno[len(prefix):])
-                if seq > max_seq:
-                    max_seq = seq
-            except ValueError:
-                pass
+        for p in (prefix, legacy_prefix):
+            if rno.startswith(p):
+                try:
+                    seq = int(rno[len(p):])
+                    if seq > max_seq:
+                        max_seq = seq
+                except ValueError:
+                    pass
+                break
     return f"{prefix}{max_seq + 1:03d}"
 
 

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{% if action == 'create' %}입고 등록{% else %}입고 수정{% endif %}{% endblock %}
-{% block page_title %}{% if action == 'create' %}② 롤 원단 입고 등록{% else %}입고 수정{% endif %}{% endblock %}
+{% block page_title %}{% if action == 'create' %}② 원단 입고 등록{% else %}입고 수정{% endif %}{% endblock %}
 {% block content %}
 <div class="max-w-2xl">
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -13,7 +13,7 @@
             <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             <div>
                 <div class="font-semibold">이 입고는 재단에서 이미 사용 중입니다.</div>
-                <div class="text-xs mt-0.5">데이터 무결성을 위해 입고일·인쇄업체·롤번호·수량·연결 주문은 변경할 수 없습니다. 메모와 담당자만 수정 가능합니다.</div>
+                <div class="text-xs mt-0.5">데이터 무결성을 위해 입고일·인쇄업체·입고 번호·장 갯수·장 구성은 변경할 수 없습니다. 메모와 담당자만 수정 가능합니다.</div>
             </div>
         </div>
         {% endif %}
@@ -45,17 +45,17 @@
                         placeholder="인쇄업체명" {% if is_locked %}readonly{% endif %}>
                 </div>
 
-                <!-- 롤번호 (자동생성) -->
+                <!-- 입고 번호 (자동생성) -->
                 <div class="form-group">
                     <label class="form-label">
-                        롤번호 *
+                        입고 번호 *
                         <span class="text-xs text-gray-400 font-normal ml-1">시스템 자동 생성</span>
                     </label>
                     <div class="flex items-center gap-2">
                         <input type="text" name="roll_no" id="roll_no"
                             value="{{ new_roll_no if new_roll_no else (item.roll_no if item else '') }}"
                             required class="form-input flex-1 font-mono bg-gray-50"
-                            placeholder="R-YYYYMMDD-NNN" readonly>
+                            placeholder="S-YYYYMMDD-NNN" readonly>
                         {% if action == 'edit' and not is_locked %}
                         <button type="button" onclick="unlockRollNo()"
                             class="px-3 py-2 text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg whitespace-nowrap">
@@ -67,26 +67,26 @@
                             복사
                         </button>
                     </div>
-                    <p class="text-xs text-gray-400 mt-1">입고일 변경 시 자동으로 업데이트됩니다.</p>
+                    <p class="text-xs text-gray-400 mt-1">입고 묶음 1건당 1개의 식별 번호가 자동 생성됩니다.</p>
                 </div>
 
-                <!-- 입고 수량 -->
+                <!-- 장 갯수 -->
                 <div class="form-group">
-                    <label class="form-label">실제 입고 수량 *</label>
+                    <label class="form-label">장 갯수 *</label>
                     <div class="flex items-center gap-2">
                         <input type="number" name="inbound_qty" id="inbound_qty"
                             value="{{ item.inbound_qty if item else '' }}"
                             min="1" required
                             class="form-input w-40 {% if is_locked %}bg-gray-50 cursor-not-allowed{% endif %}"
-                            placeholder="수량 입력" {% if is_locked %}readonly{% endif %}>
-                        <span class="text-sm text-gray-400">장 (롤)</span>
+                            placeholder="예: 10" {% if is_locked %}readonly{% endif %}>
+                        <span class="text-sm text-gray-400">장</span>
                     </div>
-                    <p class="text-xs text-gray-400 mt-1">주문 수량과 다를 수 있습니다. 실제 입고된 수량을 입력하세요.</p>
+                    <p class="text-xs text-gray-400 mt-1">동일 구성의 장이 몇 장 입고되었는지 입력하세요. (다른 구성은 별도 등록)</p>
                 </div>
 
-                <!-- 연결 주문 -->
+                <!-- 장 구성 (이 장에 인쇄된 선수) -->
                 <div class="form-group">
-                    <label class="form-label">연결 주문 <span class="text-xs text-gray-400 font-normal">(이 롤에 포함된 주문 선택)</span></label>
+                    <label class="form-label">장 구성 <span class="text-xs text-gray-400 font-normal">(이 장에 인쇄된 선수 선택 — 1장에 복수 선수 가능)</span></label>
                     <div class="border border-gray-200 rounded-xl overflow-hidden">
                         <!-- 헤더 -->
                         <div class="grid grid-cols-12 gap-2 px-3 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -138,7 +138,7 @@
                         </div>
                     </div>
                     <input type="hidden" name="order_ids" id="order-ids-input" value="{{ item.order_ids if item else '' }}">
-                    <p class="text-xs text-gray-400 mt-1">선택된 주문: <span id="selected-orders" class="font-medium text-gray-600">{{ item.order_ids if item else '없음' }}</span></p>
+                    <p class="text-xs text-gray-400 mt-1">선택된 선수: <span id="selected-orders" class="font-medium text-gray-600">{{ item.order_ids if item else '없음' }}</span></p>
                     <div id="selected-collab-summary" class="mt-2 text-xs text-gray-500 hidden">
                         <span class="font-semibold text-gray-600">포함 원단(콜라보):</span>
                         <span id="selected-collabs" class="text-blue-600 font-medium"></span>
@@ -190,7 +190,7 @@ function onDateChange(val) {
         const d = new Date(val + 'T00:00:00');
         document.getElementById('weekday-badge').textContent = KO_DAYS[d.getDay()] + '요일';
     }
-    // 롤번호 자동 업데이트 (readonly일 때만)
+    // 입고 번호 자동 업데이트 (readonly일 때만)
     const rollField = document.getElementById('roll_no');
     if (rollField.readOnly && val) {
         fetch('/api/inbound/roll_no_preview?date=' + val)

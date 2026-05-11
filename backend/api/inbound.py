@@ -53,7 +53,7 @@ async def inbound_list(request: Request, q: str = "", page: int = 1, error: str 
 
     error_message = ""
     if error == "delete_locked":
-        error_message = "재단에 사용된 입고 롤은 삭제할 수 없습니다. 먼저 관련 재단 기록을 삭제하세요."
+        error_message = "재단에 사용된 입고는 삭제할 수 없습니다. 먼저 관련 재단 기록을 삭제하세요."
 
     paged = paginate(data, page)
     return templates.TemplateResponse("inbound/index.html", {
@@ -116,7 +116,7 @@ async def inbound_create(
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
 
-    # 롤번호 중복 검사
+    # 입고 번호 중복 검사
     existing = svc.get_all(SHEET)
     if any(r.get("roll_no") == roll_no for r in existing):
         all_inbound = existing
@@ -134,7 +134,7 @@ async def inbound_create(
             "orders": orders, "today": today_str(), "action": "create",
             "new_roll_no": roll_no, "auto_manager": manager,
             "today_weekday": day_of_week(inbound_date),
-            "error": f"롤번호 '{roll_no}' 는 이미 사용 중입니다. 다른 번호를 사용해주세요.",
+            "error": f"입고 번호 '{roll_no}' 는 이미 사용 중입니다. 다른 번호를 사용해주세요.",
         }, status_code=400)
 
     # 연결된 주문 총 주문 수량 계산
@@ -250,7 +250,7 @@ async def inbound_update(
 
     dow = day_of_week(inbound_date)
 
-    # 롤번호 중복 검사 (자신 제외) — 잠금 상태에서는 변경 없으므로 스킵
+    # 입고 번호 중복 검사 (자신 제외) — 잠금 상태에서는 변경 없으므로 스킵
     all_rows = svc.get_all(SHEET)
     if not is_locked and any(r.get("roll_no") == roll_no and r.get("inbound_id") != inbound_id for r in all_rows):
         item = next((r for r in all_rows if r["inbound_id"] == inbound_id), None)
@@ -259,7 +259,7 @@ async def inbound_update(
             "orders": svc.get_all("ORDER"), "today": today_str(), "action": "edit",
             "new_roll_no": roll_no, "auto_manager": manager,
             "today_weekday": dow,
-            "error": f"롤번호 '{roll_no}' 는 이미 사용 중입니다.",
+            "error": f"입고 번호 '{roll_no}' 는 이미 사용 중입니다.",
             "is_locked": is_locked,
         }, status_code=400)
 
@@ -327,7 +327,7 @@ async def inbound_delete(request: Request, inbound_id: str):
 
 @router.get("/api/inbound/roll_no_preview")
 async def api_roll_no_preview(date: str = ""):
-    """입고 날짜 기준 다음 롤번호 미리보기 (프론트엔드 AJAX 용)."""
+    """입고 날짜 기준 다음 입고 번호 미리보기 (프론트엔드 AJAX 용)."""
     svc = get_sheets_service()
     target_date = date or today_str()
     all_inbound = svc.get_all(SHEET)

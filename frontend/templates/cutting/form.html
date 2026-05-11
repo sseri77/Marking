@@ -12,9 +12,9 @@
             <div class="grid grid-cols-1 gap-4">
 
                 <div class="form-group">
-                    <label class="form-label">롤 입고 선택 *</label>
+                    <label class="form-label">원단 입고 선택 *</label>
                     <select name="inbound_id" required class="form-input">
-                        <option value="">입고된 롤 선택</option>
+                        <option value="">입고된 원단 선택</option>
                         {% for r in inbounds %}
                         <option value="{{ r.inbound_id }}" {% if item and item.inbound_id == r.inbound_id %}selected{% endif %}>
                             {{ r.inbound_date }} ({{ r.day_of_week if r.day_of_week else '' }}) | {{ r.roll_no }} | {{ r.vendor }}
