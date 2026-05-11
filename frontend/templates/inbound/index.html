@@ -4,6 +4,7 @@
 {% block content %}
 <div class="space-y-4">
 
+    <!-- 검색 + 등록 버튼 -->
     <div class="flex flex-col sm:flex-row gap-3 justify-between">
         <form method="get" class="flex gap-2 flex-1">
             <div class="relative flex-1 sm:max-w-xs">
@@ -19,41 +20,100 @@
         <a href="/inbound/new" class="btn-inbound px-5 py-2.5 text-sm text-center font-semibold">+ 입고 등록</a>
     </div>
 
+    <!-- 테이블 -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="bg-gray-50 border-b border-gray-100">
-                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">입고일</th>
-                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">인쇄업체</th>
-                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">롤번호</th>
-                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">연결 주문</th>
-                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">담당자</th>
-                        <th class="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">상태</th>
-                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">메모</th>
-                        <th class="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">관리</th>
+                        <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">입고일</th>
+                        <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">인쇄업체</th>
+                        <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">롤번호</th>
+                        <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">연결 주문</th>
+                        <th class="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">주문수량</th>
+                        <th class="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">입고수량</th>
+                        <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">담당자</th>
+                        <th class="px-4 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">상태</th>
+                        <th class="px-4 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">관리</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     {% for item in items %}
+                    {% set inbound_qty = item.inbound_qty | int %}
+                    {% set order_qty = item.order_qty | int %}
                     <tr class="hover:bg-blue-50/30 transition-colors">
-                        <td class="px-5 py-4 text-gray-500 whitespace-nowrap">{{ item.inbound_date }}</td>
-                        <td class="px-5 py-4 font-semibold text-gray-800">{{ item.vendor }}</td>
-                        <td class="px-5 py-4">
-                            <span class="font-mono text-sm bg-gray-50 px-2 py-1 rounded-lg text-gray-700">{{ item.roll_no }}</span>
+                        <!-- 입고일 + 요일 -->
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <div class="text-gray-700 font-medium">{{ item.inbound_date }}</div>
+                            {% if item.day_of_week %}
+                            <div class="text-xs text-gray-400">{{ item.day_of_week }}</div>
+                            {% endif %}
                         </td>
-                        <td class="px-5 py-4 text-xs text-gray-400 max-w-xs truncate" title="{{ item.order_ids }}">
-                            {{ item.order_ids if item.order_ids else '-' }}
+                        <!-- 인쇄업체 -->
+                        <td class="px-4 py-4 font-semibold text-gray-800">{{ item.vendor }}</td>
+                        <!-- 롤번호 -->
+                        <td class="px-4 py-4">
+                            <span class="font-mono text-xs bg-gray-50 border border-gray-200 px-2 py-1 rounded-lg text-gray-700">{{ item.roll_no }}</span>
                         </td>
-                        <td class="px-5 py-4 text-gray-600">{{ item.manager }}</td>
-                        <td class="px-5 py-4 text-center"><span class="badge-blue">{{ item.status }}</span></td>
-                        <td class="px-5 py-4 text-gray-400 text-xs max-w-xs truncate">{{ item.memo }}</td>
-                        <td class="px-5 py-4">
+                        <!-- 연결 주문 -->
+                        <td class="px-4 py-4 max-w-[180px]">
+                            {% if item.order_ids %}
+                                {% set order_ids_list = item.order_ids.split(',') %}
+                                {% for oid in order_ids_list %}
+                                    {% set oid = oid.strip() %}
+                                    {% if oid and oid in all_orders %}
+                                        {% set o = all_orders[oid] %}
+                                        <div class="text-xs leading-relaxed">
+                                            <span class="font-medium text-gray-700">{{ o.club_name }}</span>
+                                            <span class="text-gray-400"> {{ o.player_name }} #{{ o.player_number }}</span>
+                                        </div>
+                                    {% elif oid %}
+                                        <span class="text-xs text-gray-400 font-mono">{{ oid }}</span>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-gray-300 text-xs">-</span>
+                            {% endif %}
+                        </td>
+                        <!-- 주문수량 -->
+                        <td class="px-4 py-4 text-right">
+                            {% if order_qty > 0 %}
+                            <span class="font-semibold text-gray-600">{{ order_qty }}<span class="text-xs font-normal text-gray-400 ml-0.5">장</span></span>
+                            {% else %}
+                            <span class="text-gray-300">-</span>
+                            {% endif %}
+                        </td>
+                        <!-- 입고수량 + 진행률 -->
+                        <td class="px-4 py-4 text-right">
+                            <span class="font-bold text-blue-600">{{ inbound_qty }}<span class="text-xs font-normal text-gray-400 ml-0.5">장</span></span>
+                            {% if order_qty > 0 and inbound_qty > 0 %}
+                            {% set pct = (inbound_qty / order_qty * 100) | int %}
+                            <div class="mt-1 w-full bg-gray-100 rounded-full h-1.5">
+                                <div class="{% if pct >= 100 %}bg-green-500{% else %}bg-blue-400{% endif %} h-1.5 rounded-full"
+                                    style="width: {{ [pct, 100] | min }}%"></div>
+                            </div>
+                            <div class="text-xs text-gray-400 mt-0.5">{{ pct }}%</div>
+                            {% endif %}
+                        </td>
+                        <!-- 담당자 -->
+                        <td class="px-4 py-4 text-gray-600 text-sm">{{ item.manager }}</td>
+                        <!-- 상태 배지 -->
+                        <td class="px-4 py-4 text-center">
+                            {% if item.status == '입고완료' %}
+                            <span class="badge-blue">입고완료</span>
+                            {% elif item.status == '입고진행중' %}
+                            <span class="badge-orange">입고진행중</span>
+                            {% else %}
+                            <span class="badge-gray">{{ item.status }}</span>
+                            {% endif %}
+                        </td>
+                        <!-- 관리 버튼 -->
+                        <td class="px-4 py-4">
                             <div class="flex items-center justify-center gap-2">
                                 <a href="/inbound/{{ item.inbound_id }}/edit"
                                     class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">수정</a>
                                 <form method="post" action="/inbound/{{ item.inbound_id }}/delete"
-                                    onsubmit="return confirm('삭제하시겠습니까?')">
+                                    onsubmit="return confirm('삭제 시 연결된 주문 상태도 재계산됩니다. 삭제하시겠습니까?')">
                                     <button type="submit"
                                         class="px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">삭제</button>
                                 </form>
@@ -62,10 +122,10 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="8" class="px-5 py-12 text-center text-gray-400">
-                            <div class="text-4xl mb-2">📦</div>
-                            <div>등록된 입고 내역이 없습니다.</div>
-                            <a href="/inbound/new" class="mt-2 inline-block text-blue-500 hover:underline text-sm">입고 등록하기</a>
+                        <td colspan="9" class="px-5 py-14 text-center text-gray-400">
+                            <div class="text-4xl mb-3">📦</div>
+                            <div class="font-medium text-gray-500">등록된 입고 내역이 없습니다.</div>
+                            <a href="/inbound/new" class="mt-2 inline-block text-blue-500 hover:underline text-sm">첫 입고 등록하기</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -74,6 +134,7 @@
         </div>
     </div>
 
+    <!-- 페이지네이션 -->
     <div class="flex items-center justify-between">
         <div class="text-sm text-gray-400">총 <span class="font-semibold text-gray-700">{{ total }}</span>건</div>
         {% if total_pages > 1 %}
