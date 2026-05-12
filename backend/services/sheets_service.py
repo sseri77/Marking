@@ -18,6 +18,8 @@ SHEET_HEADERS = {
     "CLUB_MASTER": ["club_id", "club_name", "status", "created_at", "updated_at"],
     "COLLAB_MASTER": ["collab_id", "club_id", "collab_name", "status", "created_at", "updated_at"],
     "PLAYER_MASTER": ["player_id", "club_name", "collab_name", "player_name", "player_number", "status", "created_at", "updated_at"],
+    # 인쇄업체 (원단 입고처)
+    "PRINTER_MASTER": ["printer_id", "printer_name", "contact", "phone", "memo", "status", "created_at", "updated_at"],
     # 주문 (= 인쇄업체 발주 데이터)
     "ORDER": ["order_id", "order_date", "club_name", "collab_name", "player_name", "player_number", "qty", "status", "memo", "created_at"],
     # 롤 원단 입고
@@ -243,6 +245,10 @@ class SheetsService:
                 {"player_id": "PLY001", "club_name": "FC서울", "collab_name": "2024 홈킷", "player_name": "황의조", "player_number": "9", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},
                 {"player_id": "PLY002", "club_name": "FC서울", "collab_name": "2024 홈킷", "player_name": "기성용", "player_number": "6", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},
                 {"player_id": "PLY003", "club_name": "전북현대", "collab_name": "2024 어웨이킷", "player_name": "이동국", "player_number": "20", "status": "비활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},
+            ],
+            "PRINTER_MASTER": [
+                {"printer_id": "PRT001", "printer_name": "한울인쇄", "contact": "김대리", "phone": "02-1234-5678", "memo": "주거래 인쇄업체", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},
+                {"printer_id": "PRT002", "printer_name": "서울프린팅", "contact": "이과장", "phone": "02-9876-5432", "memo": "", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},
             ],
             "VENDOR_MASTER": [
                 {"vendor_id": "VND001", "vendor_name": "한국원단", "contact": "김대리", "phone": "02-1234-5678", "email": "korea@fabric.com", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},

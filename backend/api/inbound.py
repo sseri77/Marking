@@ -91,12 +91,15 @@ async def inbound_new(request: Request):
         o["_total_inbound"] = total
         o["_remaining"] = max(0, o_qty - total)
 
+    printers = [p for p in svc.get_all("PRINTER_MASTER") if p.get("status", "활성") == "활성"]
+
     return templates.TemplateResponse("inbound/form.html", {
         "request": request, "user": user, "item": None,
         "orders": orders, "today": today, "action": "create",
         "new_roll_no": new_roll_no,
         "auto_manager": user["username"],
         "today_weekday": day_of_week(today),
+        "printers": printers,
     })
 
 
@@ -129,12 +132,14 @@ async def inbound_create(
             total = order_totals.get(oid, 0)
             o["_total_inbound"] = total
             o["_remaining"] = max(0, o_qty - total)
+        printers = [p for p in svc.get_all("PRINTER_MASTER") if p.get("status", "활성") == "활성"]
         return templates.TemplateResponse("inbound/form.html", {
             "request": request, "user": user, "item": None,
             "orders": orders, "today": today_str(), "action": "create",
             "new_roll_no": roll_no, "auto_manager": manager,
             "today_weekday": day_of_week(inbound_date),
             "error": f"입고 번호 '{roll_no}' 는 이미 사용 중입니다. 다른 번호를 사용해주세요.",
+            "printers": printers,
         }, status_code=400)
 
     # 연결된 주문 총 주문 수량 계산
@@ -209,6 +214,8 @@ async def inbound_edit(request: Request, inbound_id: str):
         o["_total_inbound"] = total
         o["_remaining"] = max(0, o_qty - total)
 
+    printers = svc.get_all("PRINTER_MASTER")
+
     return templates.TemplateResponse("inbound/form.html", {
         "request": request, "user": user, "item": item,
         "orders": orders, "today": today_str(), "action": "edit",
@@ -216,6 +223,7 @@ async def inbound_edit(request: Request, inbound_id: str):
         "auto_manager": item.get("manager", user["username"]),
         "today_weekday": day_of_week(item.get("inbound_date", today_str())),
         "is_locked": inbound_id in _get_locked_inbound_ids(svc),
+        "printers": printers,
     })
 
 
@@ -261,6 +269,7 @@ async def inbound_update(
             "today_weekday": dow,
             "error": f"입고 번호 '{roll_no}' 는 이미 사용 중입니다.",
             "is_locked": is_locked,
+            "printers": svc.get_all("PRINTER_MASTER"),
         }, status_code=400)
 
     order_id_list = [o.strip() for o in order_ids.split(",") if o.strip()]
