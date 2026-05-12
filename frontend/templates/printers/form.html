@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{% if action == 'create' %}인쇄업체 등록{% else %}인쇄업체 수정{% endif %}{% endblock %}
+{% block page_title %}{% if action == 'create' %}인쇄업체 등록{% else %}인쇄업체 수정{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        {% if error %}
+        <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{{ error }}</div>
+        {% endif %}
+        <form action="/printers/{% if action == 'edit' %}{{ item.printer_id }}/edit{% else %}new{% endif %}" method="post" class="space-y-5">
+            <div class="form-group">
+                <label class="form-label">업체명 <span class="text-red-500">*</span></label>
+                <input type="text" name="printer_name" required value="{{ item.printer_name if item else '' }}" class="form-input" placeholder="예: 한울인쇄">
+            </div>
+            <div class="form-group">
+                <label class="form-label">담당자</label>
+                <input type="text" name="contact" value="{{ item.contact if item else '' }}" class="form-input" placeholder="예: 김대리">
+            </div>
+            <div class="form-group">
+                <label class="form-label">연락처</label>
+                <input type="text" name="phone" value="{{ item.phone if item else '' }}" class="form-input" placeholder="예: 02-1234-5678">
+            </div>
+            <div class="form-group">
+                <label class="form-label">메모</label>
+                <textarea name="memo" rows="2" class="form-input" placeholder="비고사항">{{ item.memo if item else '' }}</textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">상태</label>
+                <select name="status" class="form-select">
+                    <option value="활성" {% if not item or item.status == '활성' %}selected{% endif %}>활성</option>
+                    <option value="비활성" {% if item and item.status == '비활성' %}selected{% endif %}>비활성</option>
+                </select>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="btn-primary flex-1">
+                    {% if action == 'create' %}등록{% else %}저장{% endif %}
+                </button>
+                <a href="/printers" class="btn-secondary flex-1 text-center">취소</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

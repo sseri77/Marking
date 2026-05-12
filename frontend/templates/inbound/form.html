@@ -39,10 +39,38 @@
 
                 <!-- 인쇄업체 -->
                 <div class="form-group">
-                    <label class="form-label">인쇄업체 *</label>
-                    <input type="text" name="vendor" value="{{ item.vendor if item else '' }}"
-                        required class="form-input {% if is_locked %}bg-gray-50 cursor-not-allowed{% endif %}"
-                        placeholder="인쇄업체명" {% if is_locked %}readonly{% endif %}>
+                    <label class="form-label flex items-center justify-between">
+                        <span>인쇄업체 *</span>
+                        {% if not is_locked %}
+                        <a href="/printers/new" target="_blank"
+                            class="text-xs font-normal text-blue-600 hover:text-blue-700 hover:underline">
+                            + 새 업체 등록
+                        </a>
+                        {% endif %}
+                    </label>
+                    <div class="relative">
+                        <input type="text" name="vendor" id="vendor_input"
+                            value="{{ item.vendor if item else '' }}"
+                            required
+                            list="printer_options"
+                            autocomplete="off"
+                            class="form-input {% if is_locked %}bg-gray-50 cursor-not-allowed{% endif %}"
+                            placeholder="등록된 인쇄업체를 검색하거나 입력하세요"
+                            oninput="onVendorInput(this.value)"
+                            {% if is_locked %}readonly{% endif %}>
+                        <datalist id="printer_options">
+                            {% for p in printers %}
+                            <option value="{{ p.printer_name }}"></option>
+                            {% endfor %}
+                        </datalist>
+                    </div>
+                    <p id="vendor_hint" class="text-xs text-gray-400 mt-1">
+                        {% if printers %}
+                            등록된 인쇄업체 {{ printers|length }}개에서 자동완성됩니다. 목록에 없으면 <a href="/printers" target="_blank" class="text-blue-600 hover:underline">인쇄업체 관리</a>에서 추가하세요.
+                        {% else %}
+                            등록된 인쇄업체가 없습니다. <a href="/printers/new" target="_blank" class="text-blue-600 hover:underline">먼저 인쇄업체를 등록</a>하면 빠른 선택이 가능합니다.
+                        {% endif %}
+                    </p>
                 </div>
 
                 <!-- 입고 번호 (자동생성) -->
@@ -225,6 +253,28 @@ function updateOrderIds() {
     }
 }
 
+function onVendorInput(val) {
+    const hint = document.getElementById('vendor_hint');
+    if (!hint) return;
+    const options = Array.from(document.querySelectorAll('#printer_options option'));
+    const trimmed = (val || '').trim();
+    if (!trimmed) {
+        hint.classList.remove('text-emerald-600', 'text-orange-500');
+        hint.classList.add('text-gray-400');
+        return;
+    }
+    const matched = options.some(o => o.value === trimmed);
+    if (matched) {
+        hint.textContent = '✓ 등록된 인쇄업체입니다.';
+        hint.classList.remove('text-gray-400', 'text-orange-500');
+        hint.classList.add('text-emerald-600');
+    } else {
+        hint.textContent = '⚠ 등록되지 않은 업체입니다. 그대로 저장하거나 인쇄업체 관리에서 등록하세요.';
+        hint.classList.remove('text-gray-400', 'text-emerald-600');
+        hint.classList.add('text-orange-500');
+    }
+}
+
 function copyRollNo() {
     const val = document.getElementById('roll_no').value;
     navigator.clipboard.writeText(val).then(() => {
@@ -248,7 +298,11 @@ function unlockManager() {
     f.focus();
 }
 
-// 체크박스 상태 초기화
-document.addEventListener('DOMContentLoaded', updateOrderIds);
+// 체크박스 상태 초기화 + 인쇄업체 입력 상태 동기화
+document.addEventListener('DOMContentLoaded', () => {
+    updateOrderIds();
+    const vi = document.getElementById('vendor_input');
+    if (vi) onVendorInput(vi.value);
+});
 </script>
 {% endblock %}
