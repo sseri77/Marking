@@ -29,7 +29,7 @@ SHEET_HEADERS = {
     # 선수별 재단
     "CUTTING_PROCESS": ["cutting_id", "inbound_id", "order_id", "club_name", "collab_name", "player_name", "player_number", "input_qty", "success_qty", "defect_qty", "loss_qty", "status", "manager", "memo", "created_at"],
     # 출고
-    "STORE_OUTBOUND": ["outbound_id", "cutting_id", "store_name", "club_name", "collab_name", "player_name", "player_number", "qty", "invoice_no", "shipping_date", "manager", "memo", "created_at"],
+    "STORE_OUTBOUND": ["outbound_id", "cutting_id", "store_name", "club_name", "collab_name", "player_name", "player_number", "qty", "delivery_method", "invoice_no", "shipping_date", "manager", "memo", "created_at"],
 }
 
 # 시트 스키마가 변경된 후 기존 시트의 헤더/데이터를 신규 스키마로 변환하기 위한 필드명 매핑.
@@ -269,8 +269,8 @@ class SheetsService:
                 {"cutting_id": "CUT002", "inbound_id": "", "order_id": "", "club_name": "전북현대", "collab_name": "2024 어웨이킷", "player_name": "이동국", "player_number": "20", "input_qty": "80", "success_qty": "78", "defect_qty": "1", "loss_qty": "1", "status": "진행중", "manager": "최작업", "memo": "", "created_at": "2024-05-03"},
             ],
             "STORE_OUTBOUND": [
-                {"outbound_id": "OUT001", "cutting_id": "CUT001", "store_name": "강남점", "club_name": "FC서울", "collab_name": "2024 홈킷", "player_name": "황의조", "player_number": "9", "qty": "30", "invoice_no": "INV-240502", "shipping_date": "2024-05-02", "manager": "김물류", "memo": "", "created_at": "2024-05-02"},
-                {"outbound_id": "OUT002", "cutting_id": "", "store_name": "홍대점", "club_name": "FC서울", "collab_name": "2024 홈킷", "player_name": "기성용", "player_number": "6", "qty": "20", "invoice_no": "INV-240504", "shipping_date": "2024-05-04", "manager": "박물류", "memo": "", "created_at": "2024-05-04"},
+                {"outbound_id": "OUT001", "cutting_id": "CUT001", "store_name": "강남점", "club_name": "FC서울", "collab_name": "2024 홈킷", "player_name": "황의조", "player_number": "9", "qty": "30", "delivery_method": "택배", "invoice_no": "INV-240502", "shipping_date": "2024-05-02", "manager": "김물류", "memo": "", "created_at": "2024-05-02"},
+                {"outbound_id": "OUT002", "cutting_id": "", "store_name": "홍대점", "club_name": "FC서울", "collab_name": "2024 홈킷", "player_name": "기성용", "player_number": "6", "qty": "20", "delivery_method": "퀵", "invoice_no": "", "shipping_date": "2024-05-04", "manager": "박물류", "memo": "퀵 발송", "created_at": "2024-05-04"},
             ],
             "INVENTORY_STATUS": [
                 {"inventory_id": "INV001", "category": "원재료", "item_name": "폴리에스터", "spec": "150cm/white", "current_qty": "450", "safe_qty": "100", "unit": "m", "updated_at": "2024-05-01"},

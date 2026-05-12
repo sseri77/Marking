@@ -171,9 +171,32 @@
                     <p id="qty-hint" class="text-xs text-gray-400 mt-1"></p>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">송장번호 <span class="text-red-500">*</span></label>
-                    <input type="text" name="invoice_no" required value="{{ item.invoice_no if item else '' }}" class="form-input" placeholder="INV-240501">
+                    <label class="form-label">배송방법 <span class="text-red-500">*</span></label>
+                    {% set dm = item.delivery_method if item and item.delivery_method else '택배' %}
+                    <div class="flex gap-2" role="radiogroup" aria-label="배송방법">
+                        {% for opt in ['택배', '퀵', '기타'] %}
+                        <label class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border rounded-lg cursor-pointer text-sm transition-colors
+                            {% if dm == opt %}border-green-500 bg-green-50 text-green-700 font-medium{% else %}border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">
+                            <input type="radio" name="delivery_method" value="{{ opt }}" class="sr-only"
+                                {% if dm == opt %}checked{% endif %}
+                                onchange="onDeliveryMethodChange(this)">
+                            <span>{{ opt }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
                 </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label flex items-center gap-2">
+                    <span>송장번호</span>
+                    <span id="invoice_required" class="text-red-500 hidden">*</span>
+                    <span id="invoice_optional" class="text-xs text-gray-400 font-normal">선택 입력</span>
+                </label>
+                <input type="text" name="invoice_no" id="invoice_no_input"
+                    value="{{ item.invoice_no if item else '' }}"
+                    class="form-input" placeholder="택배 발송 시 입력 (예: INV-240501)">
+                <p id="invoice_hint" class="text-xs text-gray-400 mt-1"></p>
             </div>
 
             <div class="form-group">
@@ -353,6 +376,42 @@ function onStoreInput(val) {
     }
 }
 
+// ===== 배송방법 =====
+function onDeliveryMethodChange(radio) {
+    document.querySelectorAll('input[name="delivery_method"]').forEach(r => {
+        const label = r.closest('label');
+        if (!label) return;
+        if (r.checked) {
+            label.classList.add('border-green-500', 'bg-green-50', 'text-green-700', 'font-medium');
+            label.classList.remove('border-gray-200', 'text-gray-600', 'hover:bg-gray-50');
+        } else {
+            label.classList.remove('border-green-500', 'bg-green-50', 'text-green-700', 'font-medium');
+            label.classList.add('border-gray-200', 'text-gray-600', 'hover:bg-gray-50');
+        }
+    });
+    const method = (radio && radio.value) || (document.querySelector('input[name="delivery_method"]:checked') || {}).value || '택배';
+    const input = document.getElementById('invoice_no_input');
+    const hint = document.getElementById('invoice_hint');
+    const reqMark = document.getElementById('invoice_required');
+    const optMark = document.getElementById('invoice_optional');
+    if (method === '택배') {
+        if (input) input.placeholder = '예: 1234-5678-9012';
+        if (hint) hint.textContent = '택배 발송 시 송장번호를 입력해주세요.';
+        if (reqMark) reqMark.classList.remove('hidden');
+        if (optMark) optMark.classList.add('hidden');
+    } else if (method === '퀵') {
+        if (input) input.placeholder = '퀵 발송 — 송장번호 없이도 저장 가능';
+        if (hint) hint.textContent = '퀵 발송은 송장번호가 없어도 됩니다. (퀵 업체명/연락처 등을 입력해도 됩니다)';
+        if (reqMark) reqMark.classList.add('hidden');
+        if (optMark) optMark.classList.remove('hidden');
+    } else {
+        if (input) input.placeholder = '기타 발송 — 식별값(있다면)';
+        if (hint) hint.textContent = '기타 발송은 송장번호가 없어도 됩니다.';
+        if (reqMark) reqMark.classList.add('hidden');
+        if (optMark) optMark.classList.remove('hidden');
+    }
+}
+
 document.addEventListener('click', (e) => {
     const cc = document.getElementById('cutting_combo');
     if (cc && !cc.contains(e.target)) closeCuttingDropdown();
@@ -373,6 +432,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hint) hint.textContent = '재단 잔여 ' + remaining + '장까지 출고 가능';
         }
     }
+    // 배송방법 초기 상태 반영
+    onDeliveryMethodChange(document.querySelector('input[name="delivery_method"]:checked'));
 });
 </script>
 {% endblock %}
