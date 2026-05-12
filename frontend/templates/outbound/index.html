@@ -30,6 +30,7 @@
                         <th>구단/콜라보</th>
                         <th>선수</th>
                         <th>수량</th>
+                        <th>배송</th>
                         <th>송장번호</th>
                         <th>담당자</th>
                         <th class="text-right">관리</th>
@@ -49,7 +50,20 @@
                             <span class="text-xs text-gray-500 ml-1">#{{ item.player_number }}</span>
                         </td>
                         <td class="font-semibold text-green-600">{{ item.qty }}<span class="text-xs text-gray-400 ml-1">개</span></td>
-                        <td><span class="font-mono text-xs bg-green-50 text-green-700 px-2 py-1 rounded">{{ item.invoice_no }}</span></td>
+                        <td>
+                            {% set dm = item.delivery_method or '택배' %}
+                            <span class="badge text-xs
+                                {% if dm == '택배' %}badge-green{% elif dm == '퀵' %}bg-orange-50 text-orange-700{% else %}badge-gray{% endif %}">
+                                {{ dm }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if item.invoice_no %}
+                            <span class="font-mono text-xs bg-green-50 text-green-700 px-2 py-1 rounded">{{ item.invoice_no }}</span>
+                            {% else %}
+                            <span class="text-xs text-gray-300">—</span>
+                            {% endif %}
+                        </td>
                         <td class="text-gray-500 text-sm">{{ item.manager }}</td>
                         <td class="text-right">
                             <div class="flex items-center justify-end gap-2">
@@ -61,7 +75,7 @@
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="8" class="text-center py-10 text-gray-400">출고 내역이 없습니다.</td></tr>
+                    <tr><td colspan="9" class="text-center py-10 text-gray-400">출고 내역이 없습니다.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

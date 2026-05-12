@@ -63,7 +63,7 @@ async def outbound_list(request: Request, q: str = "", page: int = 1):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
-    data = svc.search(SHEET, q, ["store_name", "club_name", "player_name", "invoice_no"]) if q else svc.get_all(SHEET)
+    data = svc.search(SHEET, q, ["store_name", "club_name", "player_name", "invoice_no", "delivery_method"]) if q else svc.get_all(SHEET)
     data = sorted(data, key=lambda x: x.get("shipping_date", ""), reverse=True)
     paged = paginate(data, page)
     return templates.TemplateResponse("outbound/index.html", {"request": request, "user": user, "q": q, **paged})
@@ -85,13 +85,17 @@ async def outbound_new(request: Request):
     })
 
 
+DELIVERY_METHODS = {"택배", "퀵", "기타"}
+
+
 @router.post("/outbound/new")
 async def outbound_create(
     request: Request,
     cutting_id: str = Form(...),
     store_name: str = Form(...),
     qty: int = Form(...),
-    invoice_no: str = Form(...),
+    delivery_method: str = Form("택배"),
+    invoice_no: str = Form(""),
     shipping_date: str = Form(...),
     manager: str = Form(...),
     memo: str = Form(""),
@@ -111,6 +115,8 @@ async def outbound_create(
             "auto_manager": manager,
             "error": "선택한 재단 기록을 찾을 수 없거나 아직 완료 상태가 아닙니다.",
         }, status_code=400)
+    if delivery_method not in DELIVERY_METHODS:
+        delivery_method = "택배"
     svc.append_row(SHEET, {
         "outbound_id": generate_id("OUT"),
         "cutting_id": cutting_id,
@@ -120,6 +126,7 @@ async def outbound_create(
         "player_name": cutting.get("player_name", ""),
         "player_number": cutting.get("player_number", ""),
         "qty": qty,
+        "delivery_method": delivery_method,
         "invoice_no": invoice_no,
         "shipping_date": shipping_date,
         "manager": manager,
@@ -156,7 +163,8 @@ async def outbound_update(
     cutting_id: str = Form(""),
     store_name: str = Form(...),
     qty: int = Form(...),
-    invoice_no: str = Form(...),
+    delivery_method: str = Form("택배"),
+    invoice_no: str = Form(""),
     shipping_date: str = Form(...),
     manager: str = Form(...),
     memo: str = Form(""),
@@ -165,8 +173,11 @@ async def outbound_update(
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
+    if delivery_method not in DELIVERY_METHODS:
+        delivery_method = "택배"
     update_data = {
         "store_name": store_name, "qty": qty,
+        "delivery_method": delivery_method,
         "invoice_no": invoice_no, "shipping_date": shipping_date,
         "manager": manager, "memo": memo,
     }
@@ -197,4 +208,4 @@ async def outbound_delete(request: Request, outbound_id: str):
 @router.get("/api/outbound")
 async def api_outbound_list(q: str = ""):
     svc = get_sheets_service()
-    return svc.search(SHEET, q, ["store_name", "club_name", "player_name", "invoice_no"]) if q else svc.get_all(SHEET)
+    return svc.search(SHEET, q, ["store_name", "club_name", "player_name", "invoice_no", "delivery_method"]) if q else svc.get_all(SHEET)
