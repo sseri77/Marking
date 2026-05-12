@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from backend.services.sheets_service import get_sheets_service
-from backend.utils.helpers import require_auth
+from backend.utils.helpers import require_auth, now_str
 
 router = APIRouter()
 templates = Jinja2Templates(directory="frontend/templates")
@@ -81,21 +81,8 @@ def _build_inventory_rows(svc):
     return rows
 
 
-@router.get("/inventory", response_class=HTMLResponse)
-async def inventory_status(
-    request: Request,
-    q: str = "",
-    club: str = "",
-    status: str = "",
-    stock_filter: str = "",
-):
-    user = require_auth(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
-    svc = get_sheets_service()
-    all_rows = _build_inventory_rows(svc)
+def _filter_rows(all_rows, q: str, club: str, status: str, stock_filter: str):
     rows = all_rows
-
     if q:
         ql = q.lower()
         rows = [r for r in rows if ql in r["club_name"].lower()
@@ -112,8 +99,24 @@ async def inventory_status(
         rows = [r for r in rows if r["cut_success"] < r["ordered"]]
     elif stock_filter == "completed":
         rows = [r for r in rows if r["remaining"] == 0 and r["ordered"] > 0]
-
     rows.sort(key=lambda r: r["order_date"], reverse=True)
+    return rows
+
+
+@router.get("/inventory", response_class=HTMLResponse)
+async def inventory_status(
+    request: Request,
+    q: str = "",
+    club: str = "",
+    status: str = "",
+    stock_filter: str = "",
+):
+    user = require_auth(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    svc = get_sheets_service()
+    all_rows = _build_inventory_rows(svc)
+    rows = _filter_rows(all_rows, q, club, status, stock_filter)
 
     summary = {
         "total_ordered": sum(r["ordered"] for r in rows),
@@ -148,6 +151,63 @@ async def inventory_status(
         "club": club,
         "status": status,
         "stock_filter": stock_filter,
+    })
+
+
+@router.get("/inventory/print", response_class=HTMLResponse)
+async def inventory_print(
+    request: Request,
+    q: str = "",
+    club: str = "",
+    status: str = "",
+    stock_filter: str = "",
+):
+    user = require_auth(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    svc = get_sheets_service()
+    all_rows = _build_inventory_rows(svc)
+    rows = _filter_rows(all_rows, q, club, status, stock_filter)
+
+    summary = {
+        "total_ordered": sum(r["ordered"] for r in rows),
+        "total_inbound": sum(r["inbound"] for r in rows),
+        "total_cut_success": sum(r["cut_success"] for r in rows),
+        "total_outbound": sum(r["outbound"] for r in rows),
+        "total_on_hand": sum(r["on_hand"] for r in rows),
+        "total_remaining": sum(r["remaining"] for r in rows),
+    }
+
+    club_totals = defaultdict(lambda: {"ordered": 0, "cut_success": 0, "outbound": 0, "on_hand": 0, "remaining": 0})
+    for r in rows:
+        ct = club_totals[r["club_name"] or "(미지정)"]
+        ct["ordered"] += r["ordered"]
+        ct["cut_success"] += r["cut_success"]
+        ct["outbound"] += r["outbound"]
+        ct["on_hand"] += r["on_hand"]
+        ct["remaining"] += r["remaining"]
+    club_summary = sorted(club_totals.items(), key=lambda kv: kv[1]["remaining"], reverse=True)
+
+    stock_filter_labels = {
+        "on_hand": "보유 재고 있음",
+        "shortage": "재단 미완료",
+        "completed": "출고 완료",
+    }
+    filters = {
+        "검색어": q,
+        "구단": club,
+        "상태": status,
+        "재고 필터": stock_filter_labels.get(stock_filter, ""),
+    }
+    active_filters = {k: v for k, v in filters.items() if v}
+
+    return templates.TemplateResponse(request, "inventory/print.html", {
+        "user": user,
+        "rows": rows,
+        "summary": summary,
+        "club_summary": club_summary,
+        "active_filters": active_filters,
+        "printed_at": now_str(),
     })
 
 
