@@ -18,7 +18,7 @@ async def order_list(request: Request, q: str = "", page: int = 1):
     data = svc.search(SHEET, q, ["club_name", "player_name", "player_number", "collab_name"]) if q else svc.get_all(SHEET)
     data = sorted(data, key=lambda x: x.get("order_date", ""), reverse=True)
     paged = paginate(data, page)
-    return templates.TemplateResponse("orders/index.html", {"request": request, "user": user, "q": q, **paged})
+    return templates.TemplateResponse(request, "orders/index.html", {"user": user, "q": q, **paged})
 
 
 @router.get("/orders/new", response_class=HTMLResponse)
@@ -30,8 +30,8 @@ async def order_new(request: Request):
     clubs = svc.get_all("CLUB_MASTER")
     collabs = svc.get_all("COLLAB_MASTER")
     players = svc.get_all("PLAYER_MASTER")
-    return templates.TemplateResponse("orders/form.html", {
-        "request": request, "user": user, "item": None,
+    return templates.TemplateResponse(request, "orders/form.html", {
+        "user": user, "item": None,
         "clubs": clubs, "collabs": collabs, "players": players,
         "today": today_str(), "action": "create"
     })
@@ -80,8 +80,8 @@ async def order_edit(request: Request, order_id: str):
     clubs = svc.get_all("CLUB_MASTER")
     collabs = svc.get_all("COLLAB_MASTER")
     players = svc.get_all("PLAYER_MASTER")
-    return templates.TemplateResponse("orders/form.html", {
-        "request": request, "user": user, "item": item,
+    return templates.TemplateResponse(request, "orders/form.html", {
+        "user": user, "item": item,
         "clubs": clubs, "collabs": collabs, "players": players,
         "today": today_str(), "action": "edit"
     })

@@ -66,7 +66,7 @@ async def outbound_list(request: Request, q: str = "", page: int = 1):
     data = svc.search(SHEET, q, ["store_name", "club_name", "player_name", "invoice_no", "delivery_method"]) if q else svc.get_all(SHEET)
     data = sorted(data, key=lambda x: x.get("shipping_date", ""), reverse=True)
     paged = paginate(data, page)
-    return templates.TemplateResponse("outbound/index.html", {"request": request, "user": user, "q": q, **paged})
+    return templates.TemplateResponse(request, "outbound/index.html", {"user": user, "q": q, **paged})
 
 
 @router.get("/outbound/new", response_class=HTMLResponse)
@@ -77,8 +77,8 @@ async def outbound_new(request: Request):
     svc = get_sheets_service()
     cuttings = _build_cutting_options(svc, completed_only=True)
     stores = [s for s in svc.get_all("STORE_MASTER") if s.get("status", "활성") == "활성"]
-    return templates.TemplateResponse("outbound/form.html", {
-        "request": request, "user": user, "item": None,
+    return templates.TemplateResponse(request, "outbound/form.html", {
+        "user": user, "item": None,
         "cuttings": cuttings, "stores": stores,
         "today": today_str(), "action": "create",
         "auto_manager": user["username"],
@@ -108,8 +108,8 @@ async def outbound_create(
     if not cutting or cutting.get("status") != "완료":
         cuttings = _build_cutting_options(svc, completed_only=True)
         stores = [s for s in svc.get_all("STORE_MASTER") if s.get("status", "활성") == "활성"]
-        return templates.TemplateResponse("outbound/form.html", {
-            "request": request, "user": user, "item": None,
+        return templates.TemplateResponse(request, "outbound/form.html", {
+            "user": user, "item": None,
             "cuttings": cuttings, "stores": stores,
             "today": today_str(), "action": "create",
             "auto_manager": manager,
@@ -148,8 +148,8 @@ async def outbound_edit(request: Request, outbound_id: str):
         raise HTTPException(status_code=404, detail="출고 내역을 찾을 수 없습니다.")
     cuttings = _build_cutting_options(svc, completed_only=True, keep_cutting_id=item.get("cutting_id", ""))
     stores = svc.get_all("STORE_MASTER")
-    return templates.TemplateResponse("outbound/form.html", {
-        "request": request, "user": user, "item": item,
+    return templates.TemplateResponse(request, "outbound/form.html", {
+        "user": user, "item": item,
         "cuttings": cuttings, "stores": stores,
         "today": today_str(), "action": "edit",
         "auto_manager": item.get("manager", user["username"]),

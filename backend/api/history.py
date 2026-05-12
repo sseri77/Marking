@@ -191,8 +191,7 @@ async def history_page(
         "remaining": sum(h["summary"]["remaining"] for h in histories),
     }
 
-    return templates.TemplateResponse("history/index.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "history/index.html", {
         "user": user,
         "histories": histories,
         "totals": totals,
@@ -246,8 +245,7 @@ async def history_print(
     }
     active_filters = {k: v for k, v in filters.items() if v}
 
-    return templates.TemplateResponse("history/print.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "history/print.html", {
         "user": user,
         "histories": histories,
         "totals": totals,

@@ -28,8 +28,8 @@ async def cutting_list(request: Request, q: str = "", page: int = 1, error: str 
     if error == "delete_locked":
         error_message = "출고에 사용된 재단 기록은 삭제할 수 없습니다. 먼저 관련 출고 기록을 삭제하세요."
     paged = paginate(data, page)
-    return templates.TemplateResponse("cutting/index.html", {
-        "request": request, "user": user, "q": q,
+    return templates.TemplateResponse(request, "cutting/index.html", {
+        "user": user, "q": q,
         "locked_cutting_ids": locked_cutting_ids,
         "error_message": error_message,
         **paged,
@@ -45,8 +45,8 @@ async def cutting_new(request: Request):
     inbounds = svc.get_all("ROLL_INBOUND")
     orders = svc.get_all("ORDER")
     players = svc.get_all("PLAYER_MASTER")
-    return templates.TemplateResponse("cutting/form.html", {
-        "request": request, "user": user, "item": None,
+    return templates.TemplateResponse(request, "cutting/form.html", {
+        "user": user, "item": None,
         "inbounds": inbounds, "orders": orders, "players": players,
         "action": "create", "auto_manager": user["username"],
     })
@@ -74,8 +74,8 @@ async def cutting_create(
         return RedirectResponse(url="/login", status_code=303)
     if success_qty > input_qty:
         svc = get_sheets_service()
-        return templates.TemplateResponse("cutting/form.html", {
-            "request": request, "user": user, "item": None,
+        return templates.TemplateResponse(request, "cutting/form.html", {
+            "user": user, "item": None,
             "inbounds": svc.get_all("ROLL_INBOUND"), "orders": svc.get_all("ORDER"),
             "players": svc.get_all("PLAYER_MASTER"), "action": "create",
             "auto_manager": manager,
@@ -120,8 +120,8 @@ async def cutting_edit(request: Request, cutting_id: str):
     inbounds = svc.get_all("ROLL_INBOUND")
     orders = svc.get_all("ORDER")
     players = svc.get_all("PLAYER_MASTER")
-    return templates.TemplateResponse("cutting/form.html", {
-        "request": request, "user": user, "item": item,
+    return templates.TemplateResponse(request, "cutting/form.html", {
+        "user": user, "item": item,
         "inbounds": inbounds, "orders": orders, "players": players,
         "action": "edit", "auto_manager": item.get("manager", user["username"]),
     })

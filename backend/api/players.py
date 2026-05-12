@@ -17,7 +17,7 @@ async def players_list(request: Request, q: str = "", page: int = 1):
     svc = get_sheets_service()
     data = svc.search(SHEET, q, ["player_name", "player_number", "club_name", "collab_name"]) if q else svc.get_all(SHEET)
     paged = paginate(data, page)
-    return templates.TemplateResponse("players/index.html", {"request": request, "user": user, "q": q, **paged})
+    return templates.TemplateResponse(request, "players/index.html", {"user": user, "q": q, **paged})
 
 
 @router.get("/players/new", response_class=HTMLResponse)
@@ -28,7 +28,7 @@ async def players_new(request: Request):
     svc = get_sheets_service()
     clubs = svc.get_all("CLUB_MASTER")
     collabs = svc.get_all("COLLAB_MASTER")
-    return templates.TemplateResponse("players/form.html", {"request": request, "user": user, "player": None, "clubs": clubs, "collabs": collabs, "action": "create"})
+    return templates.TemplateResponse(request, "players/form.html", {"user": user, "player": None, "clubs": clubs, "collabs": collabs, "action": "create"})
 
 
 @router.post("/players/new")
@@ -49,7 +49,7 @@ async def players_create(
     if duplicate:
         clubs = svc.get_all("CLUB_MASTER")
         collabs = svc.get_all("COLLAB_MASTER")
-        return templates.TemplateResponse("players/form.html", {"request": request, "user": user, "player": None, "clubs": clubs, "collabs": collabs, "action": "create", "error": f"선수번호 {player_number}번은 해당 구단/콜라보에 이미 등록되어 있습니다."})
+        return templates.TemplateResponse(request, "players/form.html", {"user": user, "player": None, "clubs": clubs, "collabs": collabs, "action": "create", "error": f"선수번호 {player_number}번은 해당 구단/콜라보에 이미 등록되어 있습니다."})
     ts = now_str()
     svc.append_row(SHEET, {"player_id": generate_id("PLY"), "club_name": club_name, "collab_name": collab_name, "player_name": player_name, "player_number": player_number, "status": status, "created_at": ts, "updated_at": ts})
     return RedirectResponse(url="/players", status_code=303)
@@ -67,7 +67,7 @@ async def players_edit(request: Request, player_id: str):
     player = next((p for p in players if p["player_id"] == player_id), None)
     if not player:
         raise HTTPException(status_code=404, detail="선수를 찾을 수 없습니다.")
-    return templates.TemplateResponse("players/form.html", {"request": request, "user": user, "player": player, "clubs": clubs, "collabs": collabs, "action": "edit"})
+    return templates.TemplateResponse(request, "players/form.html", {"user": user, "player": player, "clubs": clubs, "collabs": collabs, "action": "edit"})
 
 
 @router.post("/players/{player_id}/edit")

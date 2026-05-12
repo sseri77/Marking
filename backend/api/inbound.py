@@ -56,8 +56,8 @@ async def inbound_list(request: Request, q: str = "", page: int = 1, error: str 
         error_message = "재단에 사용된 입고는 삭제할 수 없습니다. 먼저 관련 재단 기록을 삭제하세요."
 
     paged = paginate(data, page)
-    return templates.TemplateResponse("inbound/index.html", {
-        "request": request, "user": user, "q": q,
+    return templates.TemplateResponse(request, "inbound/index.html", {
+        "user": user, "q": q,
         "all_orders": all_orders, "order_totals": order_totals,
         "locked_inbound_ids": locked_inbound_ids,
         "error_message": error_message,
@@ -93,8 +93,8 @@ async def inbound_new(request: Request):
 
     printers = [p for p in svc.get_all("PRINTER_MASTER") if p.get("status", "활성") == "활성"]
 
-    return templates.TemplateResponse("inbound/form.html", {
-        "request": request, "user": user, "item": None,
+    return templates.TemplateResponse(request, "inbound/form.html", {
+        "user": user, "item": None,
         "orders": orders, "today": today, "action": "create",
         "new_roll_no": new_roll_no,
         "auto_manager": user["username"],
@@ -133,8 +133,8 @@ async def inbound_create(
             o["_total_inbound"] = total
             o["_remaining"] = max(0, o_qty - total)
         printers = [p for p in svc.get_all("PRINTER_MASTER") if p.get("status", "활성") == "활성"]
-        return templates.TemplateResponse("inbound/form.html", {
-            "request": request, "user": user, "item": None,
+        return templates.TemplateResponse(request, "inbound/form.html", {
+            "user": user, "item": None,
             "orders": orders, "today": today_str(), "action": "create",
             "new_roll_no": roll_no, "auto_manager": manager,
             "today_weekday": day_of_week(inbound_date),
@@ -216,8 +216,8 @@ async def inbound_edit(request: Request, inbound_id: str):
 
     printers = svc.get_all("PRINTER_MASTER")
 
-    return templates.TemplateResponse("inbound/form.html", {
-        "request": request, "user": user, "item": item,
+    return templates.TemplateResponse(request, "inbound/form.html", {
+        "user": user, "item": item,
         "orders": orders, "today": today_str(), "action": "edit",
         "new_roll_no": item.get("roll_no", ""),
         "auto_manager": item.get("manager", user["username"]),
@@ -262,8 +262,8 @@ async def inbound_update(
     all_rows = svc.get_all(SHEET)
     if not is_locked and any(r.get("roll_no") == roll_no and r.get("inbound_id") != inbound_id for r in all_rows):
         item = next((r for r in all_rows if r["inbound_id"] == inbound_id), None)
-        return templates.TemplateResponse("inbound/form.html", {
-            "request": request, "user": user, "item": item,
+        return templates.TemplateResponse(request, "inbound/form.html", {
+            "user": user, "item": item,
             "orders": svc.get_all("ORDER"), "today": today_str(), "action": "edit",
             "new_roll_no": roll_no, "auto_manager": manager,
             "today_weekday": dow,

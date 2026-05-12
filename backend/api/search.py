@@ -29,7 +29,7 @@ async def search_page(request: Request, q: str = "", type: str = "all"):
         total = sum(len(v) for v in results.values())
     else:
         total = 0
-    return templates.TemplateResponse("search/index.html", {"request": request, "user": user, "q": q, "type": type, "results": results, "total": total})
+    return templates.TemplateResponse(request, "search/index.html", {"user": user, "q": q, "type": type, "results": results, "total": total})
 
 
 @router.get("/api/search")
