@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from backend.config import get_settings
 from backend.services.sheets_service import get_sheets_service
 from backend.utils.helpers import require_auth
-from backend.api import auth, clubs, collabs, players, printers, stores, orders, inbound, cutting, outbound, search
+from backend.api import auth, clubs, collabs, players, printers, stores, orders, inbound, cutting, outbound, search, inventory, history
 
 settings = get_settings()
 
@@ -23,7 +23,7 @@ app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 
 templates = Jinja2Templates(directory="frontend/templates")
 
-for router_module in [auth, clubs, collabs, players, printers, stores, orders, inbound, cutting, outbound, search]:
+for router_module in [auth, clubs, collabs, players, printers, stores, orders, inbound, cutting, outbound, search, inventory, history]:
     app.include_router(router_module.router)
 
 

@@ -1,87 +1,182 @@
 {% extends "base.html" %}
-{% block title %}재고 관리{% endblock %}
-{% block page_title %}재고 관리{% endblock %}
+{% block title %}재고 현황{% endblock %}
+{% block page_title %}재고 현황{% endblock %}
 
 {% block content %}
-<div class="space-y-4">
-    {% if low_stock_count > 0 %}
-    <div class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3">
-        <svg class="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-        <span class="text-sm text-red-700 font-medium">안전재고 이하 품목이 <strong>{{ low_stock_count }}개</strong> 있습니다. 즉시 확인이 필요합니다.</span>
-    </div>
-    {% endif %}
+<div class="space-y-5">
 
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <form action="/inventory" method="get" class="flex gap-2">
-            <div class="relative flex-1 sm:w-72">
-                <input type="text" name="q" value="{{ q }}" placeholder="품목명 / 분류 검색..." class="search-input">
-                <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+    <!-- 요약 카드 -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div class="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+            <div class="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">총 주문</div>
+            <div class="mt-1 text-2xl font-bold text-gray-800 tabular-nums">{{ summary.total_ordered }}<span class="text-xs font-normal text-gray-400 ml-1">장</span></div>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+            <div class="text-[11px] text-blue-500 font-semibold uppercase tracking-wider">입고</div>
+            <div class="mt-1 text-2xl font-bold text-gray-800 tabular-nums">{{ summary.total_inbound }}<span class="text-xs font-normal text-gray-400 ml-1">장</span></div>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+            <div class="text-[11px] text-orange-500 font-semibold uppercase tracking-wider">재단 완료</div>
+            <div class="mt-1 text-2xl font-bold text-gray-800 tabular-nums">{{ summary.total_cut_success }}<span class="text-xs font-normal text-gray-400 ml-1">장</span></div>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+            <div class="text-[11px] text-green-500 font-semibold uppercase tracking-wider">출고</div>
+            <div class="mt-1 text-2xl font-bold text-gray-800 tabular-nums">{{ summary.total_outbound }}<span class="text-xs font-normal text-gray-400 ml-1">장</span></div>
+        </div>
+        <div class="bg-amber-50 rounded-2xl border border-amber-100 p-4 shadow-sm">
+            <div class="text-[11px] text-amber-600 font-semibold uppercase tracking-wider">보유 재고</div>
+            <div class="mt-1 text-2xl font-bold text-amber-700 tabular-nums">{{ summary.total_on_hand }}<span class="text-xs font-normal text-amber-400 ml-1">장</span></div>
+            <div class="text-[10px] text-amber-500 mt-1">재단 완료 - 출고</div>
+        </div>
+        <div class="bg-red-50 rounded-2xl border border-red-100 p-4 shadow-sm">
+            <div class="text-[11px] text-red-600 font-semibold uppercase tracking-wider">미출고 잔량</div>
+            <div class="mt-1 text-2xl font-bold text-red-700 tabular-nums">{{ summary.total_remaining }}<span class="text-xs font-normal text-red-400 ml-1">장</span></div>
+            <div class="text-[10px] text-red-500 mt-1">주문 - 출고</div>
+        </div>
+    </div>
+
+    <!-- 필터 -->
+    <div class="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div class="md:col-span-2">
+                <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">검색</label>
+                <input type="text" name="q" value="{{ q }}" placeholder="구단, 콜라보, 선수명, 등번호..."
+                    class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-blue-400">
             </div>
-            <button type="submit" class="btn-secondary">검색</button>
+            <div>
+                <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">구단</label>
+                <select name="club" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-blue-400">
+                    <option value="">전체</option>
+                    {% for c in all_clubs %}
+                    <option value="{{ c }}" {% if c == club %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">진행 상태</label>
+                <select name="status" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-blue-400">
+                    <option value="">전체</option>
+                    {% for s in all_statuses %}
+                    <option value="{{ s }}" {% if s == status %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">재고 필터</label>
+                <select name="stock_filter" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-blue-400">
+                    <option value="" {% if not stock_filter %}selected{% endif %}>전체</option>
+                    <option value="on_hand" {% if stock_filter == 'on_hand' %}selected{% endif %}>보유 재고 있음</option>
+                    <option value="shortage" {% if stock_filter == 'shortage' %}selected{% endif %}>재단 미완료</option>
+                    <option value="completed" {% if stock_filter == 'completed' %}selected{% endif %}>출고 완료</option>
+                </select>
+            </div>
+            <div class="md:col-span-5 flex items-center gap-2">
+                <button type="submit" class="btn-primary px-4 py-2 text-sm">필터 적용</button>
+                <a href="/inventory" class="btn-secondary px-4 py-2 text-sm">초기화</a>
+                <span class="ml-auto text-xs text-gray-400">총 <strong class="text-gray-700">{{ rows|length }}</strong>건</span>
+            </div>
         </form>
-        <a href="/inventory/new" class="btn-primary flex items-center gap-2 justify-center">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            재고 등록
-        </a>
     </div>
 
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-100">
-            <span class="font-medium text-gray-700">전체 {{ total }}개 품목</span>
+    <!-- 구단별 집계 -->
+    {% if club_summary %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+            <span class="font-semibold text-gray-700 text-sm">구단별 재고 요약</span>
+            <span class="text-xs text-gray-400">{{ club_summary|length }}개 구단</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>분류</th>
-                        <th>품목명</th>
-                        <th>규격</th>
-                        <th>현재수량</th>
-                        <th>안전재고</th>
-                        <th>상태</th>
-                        <th>갱신일</th>
-                        <th class="text-right">관리</th>
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50/60">
+                    <tr class="text-gray-500">
+                        <th class="px-5 py-2.5 text-left text-xs font-semibold uppercase tracking-wider">구단</th>
+                        <th class="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider">주문</th>
+                        <th class="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider">재단</th>
+                        <th class="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider">출고</th>
+                        <th class="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider">보유 재고</th>
+                        <th class="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider">잔량</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for item in items %}
-                    {% set is_low = item.current_qty|int <= item.safe_qty|int %}
-                    <tr class="{% if is_low %}bg-red-50{% endif %}">
-                        <td>
-                            <span class="badge {% if item.category == '원재료' %}badge-blue{% elif item.category == '가공품' %}badge-orange{% else %}badge-gray{% endif %}">
-                                {{ item.category }}
-                            </span>
-                        </td>
-                        <td class="font-medium text-gray-800">{{ item.item_name }}</td>
-                        <td class="text-gray-500 text-sm">{{ item.spec }}</td>
-                        <td class="font-semibold {% if is_low %}text-red-600{% else %}text-gray-800{% endif %}">
-                            {{ item.current_qty }}<span class="text-xs font-normal text-gray-400 ml-1">{{ item.unit }}</span>
-                        </td>
-                        <td class="text-gray-500">{{ item.safe_qty }}<span class="text-xs text-gray-400 ml-1">{{ item.unit }}</span></td>
-                        <td>
-                            {% if is_low %}
-                            <span class="badge badge-red">부족</span>
-                            {% else %}
-                            <span class="badge badge-green">정상</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-gray-400 text-xs">{{ item.updated_at[:10] if item.updated_at else '' }}</td>
-                        <td class="text-right">
-                            <div class="flex items-center justify-end gap-2">
-                                <a href="/inventory/{{ item.inventory_id }}/edit" class="btn-sm-secondary">수정</a>
-                                <form action="/inventory/{{ item.inventory_id }}/delete" method="post" onsubmit="return confirm('삭제하시겠습니까?')">
-                                    <button type="submit" class="btn-sm-danger">삭제</button>
-                                </form>
-                            </div>
-                        </td>
+                <tbody class="divide-y divide-gray-50">
+                    {% for name, t in club_summary %}
+                    <tr class="hover:bg-blue-50/30">
+                        <td class="px-5 py-2.5 font-medium text-gray-800">{{ name }}</td>
+                        <td class="px-5 py-2.5 text-right tabular-nums text-gray-700">{{ t.ordered }}</td>
+                        <td class="px-5 py-2.5 text-right tabular-nums text-orange-600">{{ t.cut_success }}</td>
+                        <td class="px-5 py-2.5 text-right tabular-nums text-green-600">{{ t.outbound }}</td>
+                        <td class="px-5 py-2.5 text-right tabular-nums font-semibold {% if t.on_hand > 0 %}text-amber-600{% else %}text-gray-400{% endif %}">{{ t.on_hand }}</td>
+                        <td class="px-5 py-2.5 text-right tabular-nums font-semibold {% if t.remaining > 0 %}text-red-600{% else %}text-gray-400{% endif %}">{{ t.remaining }}</td>
                     </tr>
-                    {% else %}
-                    <tr><td colspan="8" class="text-center py-10 text-gray-400">등록된 재고가 없습니다.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        {% include "partials/pagination.html" %}
     </div>
+    {% endif %}
+
+    <!-- 선수별 재고 상세 -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+            <span class="font-semibold text-gray-700 text-sm">선수별 재고 상세</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50/60">
+                    <tr class="text-gray-500">
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">주문일</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">구단/콜라보</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">선수</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">주문</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">입고</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">재단</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">불량</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">출고</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">보유</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">잔량</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">상태</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">이력</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    {% for r in rows %}
+                    <tr class="hover:bg-blue-50/30 {% if r.on_hand > 0 %}bg-amber-50/20{% endif %}">
+                        <td class="px-4 py-2.5 text-gray-500 whitespace-nowrap text-xs">{{ r.order_date }}</td>
+                        <td class="px-4 py-2.5">
+                            <div class="font-medium text-gray-800">{{ r.club_name }}</div>
+                            <div class="text-xs text-gray-400">{{ r.collab_name }}</div>
+                        </td>
+                        <td class="px-4 py-2.5">
+                            <div class="flex items-center gap-2">
+                                <span class="w-6 h-6 rounded-full bg-purple-100 text-purple-700 text-[11px] font-bold flex items-center justify-center flex-shrink-0">{{ r.player_number }}</span>
+                                <span class="font-medium text-gray-800">{{ r.player_name }}</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-2.5 text-right tabular-nums font-semibold text-gray-800">{{ r.ordered }}</td>
+                        <td class="px-4 py-2.5 text-right tabular-nums text-blue-600">{{ r.inbound }}</td>
+                        <td class="px-4 py-2.5 text-right tabular-nums text-orange-600">{{ r.cut_success }}</td>
+                        <td class="px-4 py-2.5 text-right tabular-nums text-red-400">{{ r.cut_defect }}</td>
+                        <td class="px-4 py-2.5 text-right tabular-nums text-green-600">{{ r.outbound }}</td>
+                        <td class="px-4 py-2.5 text-right tabular-nums font-semibold {% if r.on_hand > 0 %}text-amber-600{% else %}text-gray-400{% endif %}">{{ r.on_hand }}</td>
+                        <td class="px-4 py-2.5 text-right tabular-nums font-semibold {% if r.remaining > 0 %}text-red-600{% else %}text-gray-400{% endif %}">{{ r.remaining }}</td>
+                        <td class="px-4 py-2.5 text-center">
+                            {% set s = r.status %}
+                            {% if s == '주문완료' %}<span class="badge-gray">주문완료</span>
+                            {% elif s == '입고완료' %}<span class="badge-blue">입고완료</span>
+                            {% elif s == '재단완료' %}<span class="badge-orange">재단완료</span>
+                            {% elif s == '출고완료' %}<span class="badge-green">출고완료</span>
+                            {% else %}<span class="badge-gray">{{ s or '-' }}</span>{% endif %}
+                        </td>
+                        <td class="px-4 py-2.5 text-center">
+                            <a href="/history?order_id={{ r.order_id }}" class="text-xs text-blue-600 hover:underline">이력 보기</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="12" class="px-4 py-12 text-center text-gray-400">조건에 맞는 재고가 없습니다.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
