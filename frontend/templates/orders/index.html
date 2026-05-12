@@ -52,6 +52,11 @@
                         <td class="px-5 py-4 text-center">
                             <span class="font-bold text-gray-800 text-base">{{ item.qty }}</span>
                             <span class="text-xs text-gray-400">장</span>
+                            {% if item.parent_order_id %}
+                            <div class="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded">
+                                재발주
+                            </div>
+                            {% endif %}
                         </td>
                         <td class="px-5 py-4 text-center">
                             {% set s = item.status %}

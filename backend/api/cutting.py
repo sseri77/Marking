@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from backend.services.sheets_service import get_sheets_service
-from backend.utils.helpers import generate_id, now_str, require_auth, paginate
+from backend.utils.helpers import generate_id, now_str, today_str, require_auth, paginate
 
 router = APIRouter()
 templates = Jinja2Templates(directory="frontend/templates")
@@ -13,6 +13,33 @@ def _get_locked_cutting_ids(svc) -> set[str]:
     """출고(STORE_OUTBOUND)의 cutting_id 로 참조 중인 재단 cutting_id 집합."""
     outbounds = svc.get_all("STORE_OUTBOUND")
     return {(o.get("cutting_id") or "").strip() for o in outbounds if (o.get("cutting_id") or "").strip()}
+
+
+def _create_defect_reorder(svc, cutting_id: str, original_order_id: str, defect_qty: int) -> None:
+    """재단완료 시점에 불량 수량만큼 동일 선수로 새 주문을 등록한다.
+    동일 cutting_id 기준으로 이미 생성된 재발주가 있으면 중복 생성하지 않는다."""
+    if defect_qty <= 0 or not original_order_id:
+        return
+    orders = svc.get_all("ORDER")
+    tag = f"[{cutting_id}]"
+    if any(tag in (o.get("memo") or "") for o in orders):
+        return
+    original = next((o for o in orders if o.get("order_id") == original_order_id), None)
+    if not original:
+        return
+    svc.append_row("ORDER", {
+        "order_id": generate_id("ORD"),
+        "order_date": today_str(),
+        "club_name": original.get("club_name", ""),
+        "collab_name": original.get("collab_name", ""),
+        "player_name": original.get("player_name", ""),
+        "player_number": original.get("player_number", ""),
+        "qty": defect_qty,
+        "status": "주문완료",
+        "memo": f"{tag} 불량 재발주 (원본 {original_order_id})",
+        "created_at": now_str(),
+        "parent_order_id": original_order_id,
+    })
 
 
 @router.get("/cutting", response_class=HTMLResponse)
@@ -82,8 +109,9 @@ async def cutting_create(
             "error": "성공수량은 투입수량을 초과할 수 없습니다.",
         })
     svc = get_sheets_service()
+    cutting_id = generate_id("CUT")
     svc.append_row(SHEET, {
-        "cutting_id": generate_id("CUT"),
+        "cutting_id": cutting_id,
         "inbound_id": inbound_id,
         "order_id": order_id,
         "club_name": club_name,
@@ -101,6 +129,7 @@ async def cutting_create(
     })
     if status == "완료":
         svc.update_row("ORDER", "order_id", order_id, {"status": "재단완료"})
+        _create_defect_reorder(svc, cutting_id, order_id, defect_qty)
     return RedirectResponse(url="/cutting", status_code=303)
 
 
@@ -159,6 +188,7 @@ async def cutting_update(
     })
     if status == "완료":
         svc.update_row("ORDER", "order_id", order_id, {"status": "재단완료"})
+        _create_defect_reorder(svc, cutting_id, order_id, defect_qty)
     return RedirectResponse(url="/cutting", status_code=303)
 
 
