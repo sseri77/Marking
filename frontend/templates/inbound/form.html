@@ -48,25 +48,62 @@
                         </a>
                         {% endif %}
                     </label>
-                    <div class="relative">
-                        <input type="text" name="vendor" id="vendor_input"
-                            value="{{ item.vendor if item else '' }}"
-                            required
-                            list="printer_options"
-                            autocomplete="off"
-                            class="form-input {% if is_locked %}bg-gray-50 cursor-not-allowed{% endif %}"
-                            placeholder="등록된 인쇄업체를 검색하거나 입력하세요"
-                            oninput="onVendorInput(this.value)"
-                            {% if is_locked %}readonly{% endif %}>
-                        <datalist id="printer_options">
-                            {% for p in printers %}
-                            <option value="{{ p.printer_name }}"></option>
-                            {% endfor %}
-                        </datalist>
+                    <div id="vendor_combo" class="relative">
+                        <div class="relative">
+                            <input type="text" name="vendor" id="vendor_input"
+                                value="{{ item.vendor if item else '' }}"
+                                required
+                                autocomplete="off"
+                                class="form-input pr-9 {% if is_locked %}bg-gray-50 cursor-not-allowed{% endif %}"
+                                placeholder="업체명, 담당자, 연락처로 검색…"
+                                onfocus="openVendorDropdown()"
+                                oninput="onVendorInput(this.value)"
+                                onkeydown="onVendorKey(event)"
+                                {% if is_locked %}readonly{% endif %}>
+                            {% if not is_locked %}
+                            <button type="button" onclick="toggleVendorDropdown()"
+                                class="absolute inset-y-0 right-0 px-2.5 flex items-center text-gray-400 hover:text-gray-600"
+                                tabindex="-1" aria-label="인쇄업체 목록 열기">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div id="vendor_dropdown"
+                            class="hidden absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                            <div class="max-h-60 overflow-y-auto divide-y divide-gray-50" id="vendor_list">
+                                {% for p in printers %}
+                                <button type="button"
+                                    class="vendor-option w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
+                                    data-name="{{ p.printer_name }}"
+                                    data-search="{{ p.printer_name }} {{ p.contact }} {{ p.phone }}"
+                                    onclick="selectVendor('{{ p.printer_name|e }}')">
+                                    <div class="text-sm font-medium text-gray-800">{{ p.printer_name }}</div>
+                                    {% if p.contact or p.phone %}
+                                    <div class="text-xs text-gray-500 mt-0.5">
+                                        {% if p.contact %}{{ p.contact }}{% endif %}
+                                        {% if p.contact and p.phone %} · {% endif %}
+                                        {% if p.phone %}{{ p.phone }}{% endif %}
+                                    </div>
+                                    {% endif %}
+                                </button>
+                                {% endfor %}
+                            </div>
+                            <div id="vendor_empty" class="hidden px-3 py-3 text-xs text-gray-400 text-center">
+                                일치하는 업체가 없습니다. 직접 입력하거나 <a href="/printers/new" target="_blank" class="text-blue-600 hover:underline">새 업체 등록</a>.
+                            </div>
+                            {% if not printers %}
+                            <div class="px-3 py-3 text-xs text-gray-400 text-center border-t border-gray-100">
+                                등록된 인쇄업체가 없습니다.
+                                <a href="/printers/new" target="_blank" class="text-blue-600 hover:underline">먼저 등록</a>해 보세요.
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
                     <p id="vendor_hint" class="text-xs text-gray-400 mt-1">
                         {% if printers %}
-                            등록된 인쇄업체 {{ printers|length }}개에서 자동완성됩니다. 목록에 없으면 <a href="/printers" target="_blank" class="text-blue-600 hover:underline">인쇄업체 관리</a>에서 추가하세요.
+                            등록된 인쇄업체 {{ printers|length }}개 — 업체명/담당자/연락처로 검색 가능. 목록에 없는 업체는 직접 입력해도 저장됩니다.
                         {% else %}
                             등록된 인쇄업체가 없습니다. <a href="/printers/new" target="_blank" class="text-blue-600 hover:underline">먼저 인쇄업체를 등록</a>하면 빠른 선택이 가능합니다.
                         {% endif %}
@@ -253,18 +290,90 @@ function updateOrderIds() {
     }
 }
 
+function _vendorOptions() {
+    return Array.from(document.querySelectorAll('#vendor_list .vendor-option'));
+}
+
+function openVendorDropdown() {
+    const dd = document.getElementById('vendor_dropdown');
+    if (!dd) return;
+    filterVendorOptions(document.getElementById('vendor_input').value);
+    dd.classList.remove('hidden');
+}
+
+function closeVendorDropdown() {
+    const dd = document.getElementById('vendor_dropdown');
+    if (dd) dd.classList.add('hidden');
+    _vendorOptions().forEach(o => o.classList.remove('bg-blue-50'));
+}
+
+function toggleVendorDropdown() {
+    const dd = document.getElementById('vendor_dropdown');
+    if (!dd) return;
+    if (dd.classList.contains('hidden')) {
+        document.getElementById('vendor_input').focus();
+        openVendorDropdown();
+    } else {
+        closeVendorDropdown();
+    }
+}
+
+function filterVendorOptions(query) {
+    const q = (query || '').trim().toLowerCase();
+    let visible = 0;
+    _vendorOptions().forEach(opt => {
+        const hay = (opt.dataset.search || '').toLowerCase();
+        const show = !q || hay.indexOf(q) !== -1;
+        opt.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    const empty = document.getElementById('vendor_empty');
+    if (empty) empty.classList.toggle('hidden', visible !== 0);
+}
+
+function selectVendor(name) {
+    const input = document.getElementById('vendor_input');
+    input.value = name;
+    closeVendorDropdown();
+    onVendorInput(name);
+}
+
+function onVendorKey(e) {
+    const dd = document.getElementById('vendor_dropdown');
+    const opts = _vendorOptions().filter(o => o.style.display !== 'none');
+    if (e.key === 'Escape') { closeVendorDropdown(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (dd.classList.contains('hidden')) openVendorDropdown();
+        if (!opts.length) return;
+        const cur = opts.findIndex(o => o.classList.contains('bg-blue-50'));
+        opts.forEach(o => o.classList.remove('bg-blue-50'));
+        let nx = e.key === 'ArrowDown' ? (cur + 1) % opts.length : (cur <= 0 ? opts.length - 1 : cur - 1);
+        opts[nx].classList.add('bg-blue-50');
+        opts[nx].scrollIntoView({ block: 'nearest' });
+        return;
+    }
+    if (e.key === 'Enter') {
+        const active = opts.find(o => o.classList.contains('bg-blue-50'));
+        if (active) { e.preventDefault(); selectVendor(active.dataset.name); }
+    }
+}
+
 function onVendorInput(val) {
+    filterVendorOptions(val);
+    const dd = document.getElementById('vendor_dropdown');
+    if (dd && dd.classList.contains('hidden')) openVendorDropdown();
+
     const hint = document.getElementById('vendor_hint');
     if (!hint) return;
-    const options = Array.from(document.querySelectorAll('#printer_options option'));
+    const names = _vendorOptions().map(o => o.dataset.name);
     const trimmed = (val || '').trim();
     if (!trimmed) {
         hint.classList.remove('text-emerald-600', 'text-orange-500');
         hint.classList.add('text-gray-400');
         return;
     }
-    const matched = options.some(o => o.value === trimmed);
-    if (matched) {
+    if (names.some(n => n === trimmed)) {
         hint.textContent = '✓ 등록된 인쇄업체입니다.';
         hint.classList.remove('text-gray-400', 'text-orange-500');
         hint.classList.add('text-emerald-600');
@@ -274,6 +383,11 @@ function onVendorInput(val) {
         hint.classList.add('text-orange-500');
     }
 }
+
+document.addEventListener('click', (e) => {
+    const combo = document.getElementById('vendor_combo');
+    if (combo && !combo.contains(e.target)) closeVendorDropdown();
+});
 
 function copyRollNo() {
     const val = document.getElementById('roll_no').value;
