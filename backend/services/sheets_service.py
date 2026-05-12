@@ -20,6 +20,8 @@ SHEET_HEADERS = {
     "PLAYER_MASTER": ["player_id", "club_name", "collab_name", "player_name", "player_number", "status", "created_at", "updated_at"],
     # 인쇄업체 (원단 입고처)
     "PRINTER_MASTER": ["printer_id", "printer_name", "contact", "phone", "memo", "status", "created_at", "updated_at"],
+    # 매장 (출고 대상)
+    "STORE_MASTER": ["store_id", "store_name", "contact", "phone", "address", "memo", "status", "created_at", "updated_at"],
     # 주문 (= 인쇄업체 발주 데이터)
     "ORDER": ["order_id", "order_date", "club_name", "collab_name", "player_name", "player_number", "qty", "status", "memo", "created_at"],
     # 롤 원단 입고
@@ -249,6 +251,10 @@ class SheetsService:
             "PRINTER_MASTER": [
                 {"printer_id": "PRT001", "printer_name": "한울인쇄", "contact": "김대리", "phone": "02-1234-5678", "memo": "주거래 인쇄업체", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},
                 {"printer_id": "PRT002", "printer_name": "서울프린팅", "contact": "이과장", "phone": "02-9876-5432", "memo": "", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},
+            ],
+            "STORE_MASTER": [
+                {"store_id": "STR001", "store_name": "강남점", "contact": "박매니저", "phone": "02-555-1111", "address": "서울 강남구", "memo": "", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},
+                {"store_id": "STR002", "store_name": "홍대점", "contact": "최매니저", "phone": "02-555-2222", "address": "서울 마포구", "memo": "", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},
             ],
             "VENDOR_MASTER": [
                 {"vendor_id": "VND001", "vendor_name": "한국원단", "contact": "김대리", "phone": "02-1234-5678", "email": "korea@fabric.com", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},

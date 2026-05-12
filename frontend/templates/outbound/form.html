@@ -8,25 +8,72 @@
         {% if error %}<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{{ error }}</div>{% endif %}
         <form action="/outbound/{% if action == 'edit' %}{{ item.outbound_id }}/edit{% else %}new{% endif %}" method="post" class="space-y-5">
 
-            <!-- 재단 선택 -->
+            <!-- 재단 선택 (검색 가능한 드롭다운) -->
             <div class="form-group">
-                <label class="form-label">재단 선택 <span class="text-red-500">*</span></label>
-                <select name="cutting_id" id="cutting-select" {% if action == 'create' %}required{% endif %}
-                    class="form-select" onchange="onCuttingChange()">
-                    <option value="">재단 기록 선택</option>
-                    {% for c in cuttings %}
-                    <option value="{{ c.cutting_id }}"
-                        data-club="{{ c.club_name }}"
-                        data-collab="{{ c.collab_name }}"
-                        data-player="{{ c.player_name }}"
-                        data-number="{{ c.player_number }}"
-                        data-remaining="{{ c.remaining }}"
-                        {% if item and item.cutting_id == c.cutting_id %}selected{% endif %}>
-                        {{ c.club_name }} / {{ c.collab_name }} / {{ c.player_name }} #{{ c.player_number }}
-                        (성공 {{ c.success_qty }}장, 출고 {{ c.outbound_qty }}장, 잔여 {{ c.remaining }}장)
-                    </option>
-                    {% endfor %}
-                </select>
+                <label class="form-label">재단 선택 <span class="text-red-500">*</span>
+                    <span class="text-xs text-gray-400 font-normal ml-1">완료 상태인 재단만 노출</span>
+                </label>
+                <div id="cutting_combo" class="relative">
+                    <div class="relative">
+                        <input type="text" id="cutting_display"
+                            value="{% if item and item.cutting_id %}{{ item.club_name }} / {{ item.collab_name }} / {{ item.player_name }} #{{ item.player_number }}{% endif %}"
+                            autocomplete="off"
+                            class="form-input pr-9"
+                            placeholder="구단·콜라보·선수명·등번호로 검색…"
+                            onfocus="openCuttingDropdown()"
+                            oninput="filterCuttingOptions(this.value)"
+                            onkeydown="onCuttingKey(event)">
+                        <button type="button" onclick="toggleCuttingDropdown()"
+                            class="absolute inset-y-0 right-0 px-2.5 flex items-center text-gray-400 hover:text-gray-600"
+                            tabindex="-1" aria-label="재단 목록 열기">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <input type="hidden" name="cutting_id" id="cutting_id_input"
+                        value="{{ item.cutting_id if item else '' }}"
+                        {% if action == 'create' %}required{% endif %}>
+
+                    <div id="cutting_dropdown"
+                        class="hidden absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                        <div class="max-h-72 overflow-y-auto divide-y divide-gray-50" id="cutting_list">
+                            {% for c in cuttings %}
+                            {% set label = c.club_name ~ ' / ' ~ c.collab_name ~ ' / ' ~ c.player_name ~ ' #' ~ c.player_number %}
+                            <button type="button"
+                                class="cutting-option w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
+                                data-cid="{{ c.cutting_id }}"
+                                data-label="{{ label }}"
+                                data-club="{{ c.club_name }}"
+                                data-collab="{{ c.collab_name }}"
+                                data-player="{{ c.player_name }}"
+                                data-number="{{ c.player_number }}"
+                                data-remaining="{{ c.remaining }}"
+                                data-status="{{ c.status }}"
+                                data-search="{{ c.club_name }} {{ c.collab_name }} {{ c.player_name }} {{ c.player_number }}"
+                                onclick="selectCutting(this)">
+                                <div class="flex items-center justify-between">
+                                    <div class="text-sm font-medium text-gray-800">{{ c.club_name }} <span class="text-blue-600">{{ c.collab_name }}</span> · {{ c.player_name }} #{{ c.player_number }}</div>
+                                    {% if c.status != '완료' %}
+                                    <span class="badge badge-gray text-[10px]">{{ c.status }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-xs text-gray-500 mt-0.5">
+                                    성공 {{ c.success_qty }}장 · 출고 {{ c.outbound_qty }}장 · <span class="{% if c.remaining > 0 %}text-orange-500 font-medium{% else %}text-gray-300{% endif %}">잔여 {{ c.remaining }}장</span>
+                                </div>
+                            </button>
+                            {% endfor %}
+                        </div>
+                        <div id="cutting_empty" class="hidden px-3 py-3 text-xs text-gray-400 text-center">
+                            일치하는 재단이 없습니다.
+                        </div>
+                        {% if not cuttings %}
+                        <div class="px-3 py-3 text-xs text-gray-400 text-center border-t border-gray-100">
+                            출고 가능한 완료된 재단이 없습니다. <a href="/cutting" class="text-blue-600 hover:underline">재단을 완료</a>한 후 다시 시도하세요.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
                 {% if item and not item.cutting_id %}
                 <p class="text-xs text-amber-600 mt-1">이 출고는 재단 기록과 연결되어 있지 않습니다. 위에서 선택해 주세요.</p>
                 {% endif %}
@@ -58,8 +105,62 @@
                     <input type="date" name="shipping_date" required value="{{ item.shipping_date if item else today }}" class="form-input">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">매장명 <span class="text-red-500">*</span></label>
-                    <input type="text" name="store_name" required value="{{ item.store_name if item else '' }}" class="form-input" placeholder="예: 강남점">
+                    <label class="form-label flex items-center justify-between">
+                        <span>매장명 <span class="text-red-500">*</span></span>
+                        <a href="/stores/new" target="_blank"
+                            class="text-xs font-normal text-blue-600 hover:text-blue-700 hover:underline">
+                            + 새 매장 등록
+                        </a>
+                    </label>
+                    <div id="store_combo" class="relative">
+                        <div class="relative">
+                            <input type="text" name="store_name" id="store_input"
+                                value="{{ item.store_name if item else '' }}"
+                                required autocomplete="off"
+                                class="form-input pr-9"
+                                placeholder="매장명·담당자·연락처로 검색…"
+                                onfocus="openStoreDropdown()"
+                                oninput="onStoreInput(this.value)"
+                                onkeydown="onStoreKey(event)">
+                            <button type="button" onclick="toggleStoreDropdown()"
+                                class="absolute inset-y-0 right-0 px-2.5 flex items-center text-gray-400 hover:text-gray-600"
+                                tabindex="-1" aria-label="매장 목록 열기">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="store_dropdown"
+                            class="hidden absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                            <div class="max-h-60 overflow-y-auto divide-y divide-gray-50" id="store_list">
+                                {% for s in stores %}
+                                <button type="button"
+                                    class="store-option w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors"
+                                    data-name="{{ s.store_name }}"
+                                    data-search="{{ s.store_name }} {{ s.contact }} {{ s.phone }}"
+                                    onclick="selectStore('{{ s.store_name|e }}')">
+                                    <div class="text-sm font-medium text-gray-800">{{ s.store_name }}</div>
+                                    {% if s.contact or s.phone %}
+                                    <div class="text-xs text-gray-500 mt-0.5">
+                                        {% if s.contact %}{{ s.contact }}{% endif %}
+                                        {% if s.contact and s.phone %} · {% endif %}
+                                        {% if s.phone %}{{ s.phone }}{% endif %}
+                                    </div>
+                                    {% endif %}
+                                </button>
+                                {% endfor %}
+                            </div>
+                            <div id="store_empty" class="hidden px-3 py-3 text-xs text-gray-400 text-center">
+                                일치하는 매장이 없습니다. 직접 입력하거나 <a href="/stores/new" target="_blank" class="text-blue-600 hover:underline">새 매장 등록</a>.
+                            </div>
+                            {% if not stores %}
+                            <div class="px-3 py-3 text-xs text-gray-400 text-center border-t border-gray-100">
+                                등록된 매장이 없습니다. <a href="/stores/new" target="_blank" class="text-blue-600 hover:underline">먼저 등록</a>해 보세요.
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <p id="store_hint" class="text-xs text-gray-400 mt-1"></p>
                 </div>
             </div>
 
@@ -93,27 +194,185 @@
 {% endblock %}
 {% block extra_scripts %}
 <script>
-function onCuttingChange() {
-    const sel = document.getElementById('cutting-select');
-    const opt = sel.options[sel.selectedIndex];
-    const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '-'; };
-    if (opt && opt.value) {
-        setText('info-club', opt.dataset.club);
-        setText('info-collab', opt.dataset.collab);
-        setText('info-player', opt.dataset.player);
-        setText('info-number', opt.dataset.number);
-        const remaining = parseInt(opt.dataset.remaining || '0', 10);
-        const hint = document.getElementById('qty-hint');
-        if (hint) hint.textContent = '재단 잔여 ' + remaining + '장까지 출고 가능';
+// ===== 재단 검색 콤보박스 =====
+function _cuttingOptions() {
+    return Array.from(document.querySelectorAll('#cutting_list .cutting-option'));
+}
+function openCuttingDropdown() {
+    const dd = document.getElementById('cutting_dropdown');
+    if (!dd) return;
+    filterCuttingOptions(document.getElementById('cutting_display').value);
+    dd.classList.remove('hidden');
+}
+function closeCuttingDropdown() {
+    const dd = document.getElementById('cutting_dropdown');
+    if (dd) dd.classList.add('hidden');
+    _cuttingOptions().forEach(o => o.classList.remove('bg-blue-50'));
+}
+function toggleCuttingDropdown() {
+    const dd = document.getElementById('cutting_dropdown');
+    if (!dd) return;
+    if (dd.classList.contains('hidden')) {
+        document.getElementById('cutting_display').focus();
+        openCuttingDropdown();
     } else {
-        setText('info-club', '-');
-        setText('info-collab', '-');
-        setText('info-player', '-');
-        setText('info-number', '-');
-        const hint = document.getElementById('qty-hint');
-        if (hint) hint.textContent = '';
+        closeCuttingDropdown();
     }
 }
-document.addEventListener('DOMContentLoaded', onCuttingChange);
+function filterCuttingOptions(query) {
+    const q = (query || '').trim().toLowerCase();
+    let visible = 0;
+    _cuttingOptions().forEach(opt => {
+        const hay = (opt.dataset.search || '').toLowerCase();
+        const show = !q || hay.indexOf(q) !== -1;
+        opt.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    const empty = document.getElementById('cutting_empty');
+    if (empty) empty.classList.toggle('hidden', visible !== 0);
+}
+function selectCutting(btn) {
+    const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '-'; };
+    document.getElementById('cutting_id_input').value = btn.dataset.cid;
+    document.getElementById('cutting_display').value = btn.dataset.label;
+    setText('info-club', btn.dataset.club);
+    setText('info-collab', btn.dataset.collab);
+    setText('info-player', btn.dataset.player);
+    setText('info-number', btn.dataset.number);
+    const remaining = parseInt(btn.dataset.remaining || '0', 10);
+    const hint = document.getElementById('qty-hint');
+    if (hint) hint.textContent = '재단 잔여 ' + remaining + '장까지 출고 가능';
+    closeCuttingDropdown();
+}
+function onCuttingKey(e) {
+    const dd = document.getElementById('cutting_dropdown');
+    const opts = _cuttingOptions().filter(o => o.style.display !== 'none');
+    if (e.key === 'Escape') { closeCuttingDropdown(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (dd.classList.contains('hidden')) openCuttingDropdown();
+        if (!opts.length) return;
+        const cur = opts.findIndex(o => o.classList.contains('bg-blue-50'));
+        opts.forEach(o => o.classList.remove('bg-blue-50'));
+        let nx = e.key === 'ArrowDown' ? (cur + 1) % opts.length : (cur <= 0 ? opts.length - 1 : cur - 1);
+        opts[nx].classList.add('bg-blue-50');
+        opts[nx].scrollIntoView({ block: 'nearest' });
+        return;
+    }
+    if (e.key === 'Enter') {
+        const active = opts.find(o => o.classList.contains('bg-blue-50'));
+        if (active) { e.preventDefault(); selectCutting(active); }
+    }
+}
+
+// ===== 매장 검색 콤보박스 =====
+function _storeOptions() {
+    return Array.from(document.querySelectorAll('#store_list .store-option'));
+}
+function openStoreDropdown() {
+    const dd = document.getElementById('store_dropdown');
+    if (!dd) return;
+    filterStoreOptions(document.getElementById('store_input').value);
+    dd.classList.remove('hidden');
+}
+function closeStoreDropdown() {
+    const dd = document.getElementById('store_dropdown');
+    if (dd) dd.classList.add('hidden');
+    _storeOptions().forEach(o => o.classList.remove('bg-blue-50'));
+}
+function toggleStoreDropdown() {
+    const dd = document.getElementById('store_dropdown');
+    if (!dd) return;
+    if (dd.classList.contains('hidden')) {
+        document.getElementById('store_input').focus();
+        openStoreDropdown();
+    } else {
+        closeStoreDropdown();
+    }
+}
+function filterStoreOptions(query) {
+    const q = (query || '').trim().toLowerCase();
+    let visible = 0;
+    _storeOptions().forEach(opt => {
+        const hay = (opt.dataset.search || '').toLowerCase();
+        const show = !q || hay.indexOf(q) !== -1;
+        opt.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    const empty = document.getElementById('store_empty');
+    if (empty) empty.classList.toggle('hidden', visible !== 0);
+}
+function selectStore(name) {
+    document.getElementById('store_input').value = name;
+    closeStoreDropdown();
+    onStoreInput(name);
+}
+function onStoreKey(e) {
+    const dd = document.getElementById('store_dropdown');
+    const opts = _storeOptions().filter(o => o.style.display !== 'none');
+    if (e.key === 'Escape') { closeStoreDropdown(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (dd.classList.contains('hidden')) openStoreDropdown();
+        if (!opts.length) return;
+        const cur = opts.findIndex(o => o.classList.contains('bg-blue-50'));
+        opts.forEach(o => o.classList.remove('bg-blue-50'));
+        let nx = e.key === 'ArrowDown' ? (cur + 1) % opts.length : (cur <= 0 ? opts.length - 1 : cur - 1);
+        opts[nx].classList.add('bg-blue-50');
+        opts[nx].scrollIntoView({ block: 'nearest' });
+        return;
+    }
+    if (e.key === 'Enter') {
+        const active = opts.find(o => o.classList.contains('bg-blue-50'));
+        if (active) { e.preventDefault(); selectStore(active.dataset.name); }
+    }
+}
+function onStoreInput(val) {
+    filterStoreOptions(val);
+    const dd = document.getElementById('store_dropdown');
+    if (dd && dd.classList.contains('hidden')) openStoreDropdown();
+
+    const hint = document.getElementById('store_hint');
+    if (!hint) return;
+    const trimmed = (val || '').trim();
+    const names = _storeOptions().map(o => o.dataset.name);
+    if (!trimmed) {
+        hint.textContent = '';
+        hint.classList.remove('text-emerald-600', 'text-orange-500');
+        hint.classList.add('text-gray-400');
+        return;
+    }
+    if (names.some(n => n === trimmed)) {
+        hint.textContent = '✓ 등록된 매장입니다.';
+        hint.classList.remove('text-gray-400', 'text-orange-500');
+        hint.classList.add('text-emerald-600');
+    } else {
+        hint.textContent = '⚠ 등록되지 않은 매장입니다. 그대로 저장하거나 매장 관리에서 등록하세요.';
+        hint.classList.remove('text-gray-400', 'text-emerald-600');
+        hint.classList.add('text-orange-500');
+    }
+}
+
+document.addEventListener('click', (e) => {
+    const cc = document.getElementById('cutting_combo');
+    if (cc && !cc.contains(e.target)) closeCuttingDropdown();
+    const sc = document.getElementById('store_combo');
+    if (sc && !sc.contains(e.target)) closeStoreDropdown();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const si = document.getElementById('store_input');
+    if (si) onStoreInput(si.value);
+    // 수정 진입 시 cutting 잔여수량 힌트 노출
+    const cid = document.getElementById('cutting_id_input').value;
+    if (cid) {
+        const opt = _cuttingOptions().find(o => o.dataset.cid === cid);
+        if (opt) {
+            const remaining = parseInt(opt.dataset.remaining || '0', 10);
+            const hint = document.getElementById('qty-hint');
+            if (hint) hint.textContent = '재단 잔여 ' + remaining + '장까지 출고 가능';
+        }
+    }
+});
 </script>
 {% endblock %}
