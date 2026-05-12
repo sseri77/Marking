@@ -137,8 +137,7 @@ async def inventory_status(
     all_clubs = sorted({r["club_name"] for r in all_rows if r["club_name"]})
     all_statuses = sorted({r["status"] for r in all_rows if r["status"]})
 
-    return templates.TemplateResponse("inventory/index.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "inventory/index.html", {
         "user": user,
         "rows": rows,
         "summary": summary,

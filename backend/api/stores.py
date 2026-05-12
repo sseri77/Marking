@@ -17,8 +17,8 @@ async def stores_list(request: Request, q: str = "", page: int = 1):
     svc = get_sheets_service()
     data = svc.search(SHEET, q, ["store_name", "contact", "phone", "address"]) if q else svc.get_all(SHEET)
     paged = paginate(data, page)
-    return templates.TemplateResponse("stores/index.html", {
-        "request": request, "user": user, "q": q, **paged,
+    return templates.TemplateResponse(request, "stores/index.html", {
+        "user": user, "q": q, **paged,
     })
 
 
@@ -27,8 +27,8 @@ async def stores_new(request: Request):
     user = require_auth(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
-    return templates.TemplateResponse("stores/form.html", {
-        "request": request, "user": user, "item": None, "action": "create",
+    return templates.TemplateResponse(request, "stores/form.html", {
+        "user": user, "item": None, "action": "create",
     })
 
 
@@ -49,8 +49,8 @@ async def stores_create(
 
     existing = svc.get_all(SHEET)
     if any(s.get("store_name", "").strip() == store_name.strip() for s in existing):
-        return templates.TemplateResponse("stores/form.html", {
-            "request": request, "user": user, "item": None, "action": "create",
+        return templates.TemplateResponse(request, "stores/form.html", {
+            "user": user, "item": None, "action": "create",
             "error": f"매장 '{store_name}' 는 이미 등록되어 있습니다.",
         }, status_code=400)
 
@@ -79,8 +79,8 @@ async def stores_edit(request: Request, store_id: str):
     item = next((s for s in items if s["store_id"] == store_id), None)
     if not item:
         raise HTTPException(status_code=404, detail="매장을 찾을 수 없습니다.")
-    return templates.TemplateResponse("stores/form.html", {
-        "request": request, "user": user, "item": item, "action": "edit",
+    return templates.TemplateResponse(request, "stores/form.html", {
+        "user": user, "item": item, "action": "edit",
     })
 
 
@@ -103,8 +103,8 @@ async def stores_update(
     existing = svc.get_all(SHEET)
     if any(s.get("store_name", "").strip() == store_name.strip() and s.get("store_id") != store_id for s in existing):
         item = next((s for s in existing if s["store_id"] == store_id), None)
-        return templates.TemplateResponse("stores/form.html", {
-            "request": request, "user": user, "item": item, "action": "edit",
+        return templates.TemplateResponse(request, "stores/form.html", {
+            "user": user, "item": item, "action": "edit",
             "error": f"매장 '{store_name}' 는 이미 등록되어 있습니다.",
         }, status_code=400)
 

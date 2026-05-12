@@ -17,8 +17,8 @@ async def printers_list(request: Request, q: str = "", page: int = 1):
     svc = get_sheets_service()
     data = svc.search(SHEET, q, ["printer_name", "contact", "phone"]) if q else svc.get_all(SHEET)
     paged = paginate(data, page)
-    return templates.TemplateResponse("printers/index.html", {
-        "request": request, "user": user, "q": q, **paged,
+    return templates.TemplateResponse(request, "printers/index.html", {
+        "user": user, "q": q, **paged,
     })
 
 
@@ -27,8 +27,8 @@ async def printers_new(request: Request):
     user = require_auth(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
-    return templates.TemplateResponse("printers/form.html", {
-        "request": request, "user": user, "item": None, "action": "create",
+    return templates.TemplateResponse(request, "printers/form.html", {
+        "user": user, "item": None, "action": "create",
     })
 
 
@@ -49,8 +49,8 @@ async def printers_create(
     # 인쇄업체명 중복 검사
     existing = svc.get_all(SHEET)
     if any(p.get("printer_name", "").strip() == printer_name.strip() for p in existing):
-        return templates.TemplateResponse("printers/form.html", {
-            "request": request, "user": user, "item": None, "action": "create",
+        return templates.TemplateResponse(request, "printers/form.html", {
+            "user": user, "item": None, "action": "create",
             "error": f"인쇄업체 '{printer_name}' 는 이미 등록되어 있습니다.",
         }, status_code=400)
 
@@ -78,8 +78,8 @@ async def printers_edit(request: Request, printer_id: str):
     item = next((p for p in items if p["printer_id"] == printer_id), None)
     if not item:
         raise HTTPException(status_code=404, detail="인쇄업체를 찾을 수 없습니다.")
-    return templates.TemplateResponse("printers/form.html", {
-        "request": request, "user": user, "item": item, "action": "edit",
+    return templates.TemplateResponse(request, "printers/form.html", {
+        "user": user, "item": item, "action": "edit",
     })
 
 
@@ -101,8 +101,8 @@ async def printers_update(
     existing = svc.get_all(SHEET)
     if any(p.get("printer_name", "").strip() == printer_name.strip() and p.get("printer_id") != printer_id for p in existing):
         item = next((p for p in existing if p["printer_id"] == printer_id), None)
-        return templates.TemplateResponse("printers/form.html", {
-            "request": request, "user": user, "item": item, "action": "edit",
+        return templates.TemplateResponse(request, "printers/form.html", {
+            "user": user, "item": item, "action": "edit",
             "error": f"인쇄업체 '{printer_name}' 는 이미 등록되어 있습니다.",
         }, status_code=400)
 

@@ -18,7 +18,7 @@ async def collabs_list(request: Request, q: str = "", page: int = 1):
     clubs = svc.get_all("CLUB_MASTER")
     data = svc.search(SHEET, q, ["collab_name", "club_id"]) if q else svc.get_all(SHEET)
     paged = paginate(data, page)
-    return templates.TemplateResponse("collabs/index.html", {"request": request, "user": user, "q": q, "clubs": clubs, **paged})
+    return templates.TemplateResponse(request, "collabs/index.html", {"user": user, "q": q, "clubs": clubs, **paged})
 
 
 @router.get("/collabs/new", response_class=HTMLResponse)
@@ -28,7 +28,7 @@ async def collabs_new(request: Request):
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
     clubs = svc.get_all("CLUB_MASTER")
-    return templates.TemplateResponse("collabs/form.html", {"request": request, "user": user, "collab": None, "clubs": clubs, "action": "create"})
+    return templates.TemplateResponse(request, "collabs/form.html", {"user": user, "collab": None, "clubs": clubs, "action": "create"})
 
 
 @router.post("/collabs/new")
@@ -53,7 +53,7 @@ async def collabs_edit(request: Request, collab_id: str):
     collab = next((c for c in collabs if c["collab_id"] == collab_id), None)
     if not collab:
         raise HTTPException(status_code=404, detail="콜라보를 찾을 수 없습니다.")
-    return templates.TemplateResponse("collabs/form.html", {"request": request, "user": user, "collab": collab, "clubs": clubs, "action": "edit"})
+    return templates.TemplateResponse(request, "collabs/form.html", {"user": user, "collab": collab, "clubs": clubs, "action": "edit"})
 
 
 @router.post("/collabs/{collab_id}/edit")

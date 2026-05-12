@@ -70,8 +70,7 @@ async def dashboard(request: Request):
     recent_outbound = sorted(outbound_data, key=lambda x: x.get("shipping_date", ""), reverse=True)[:5]
     in_progress_cuttings = [c for c in cutting_data if c.get("status") == "진행중"][:5]
 
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "dashboard.html", {
         "user": user,
         "stats": stats,
         "order_status": order_status,

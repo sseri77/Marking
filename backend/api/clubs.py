@@ -17,7 +17,7 @@ async def clubs_list(request: Request, q: str = "", page: int = 1):
     svc = get_sheets_service()
     data = svc.search(SHEET, q, ["club_name"]) if q else svc.get_all(SHEET)
     paged = paginate(data, page)
-    return templates.TemplateResponse("clubs/index.html", {"request": request, "user": user, "q": q, **paged})
+    return templates.TemplateResponse(request, "clubs/index.html", {"user": user, "q": q, **paged})
 
 
 @router.get("/clubs/new", response_class=HTMLResponse)
@@ -25,7 +25,7 @@ async def clubs_new(request: Request):
     user = require_auth(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
-    return templates.TemplateResponse("clubs/form.html", {"request": request, "user": user, "club": None, "action": "create"})
+    return templates.TemplateResponse(request, "clubs/form.html", {"user": user, "club": None, "action": "create"})
 
 
 @router.post("/clubs/new")
@@ -49,7 +49,7 @@ async def clubs_edit(request: Request, club_id: str):
     club = next((c for c in clubs if c["club_id"] == club_id), None)
     if not club:
         raise HTTPException(status_code=404, detail="구단을 찾을 수 없습니다.")
-    return templates.TemplateResponse("clubs/form.html", {"request": request, "user": user, "club": club, "action": "edit"})
+    return templates.TemplateResponse(request, "clubs/form.html", {"user": user, "club": club, "action": "edit"})
 
 
 @router.post("/clubs/{club_id}/edit")
