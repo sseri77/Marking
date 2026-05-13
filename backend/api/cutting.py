@@ -52,6 +52,18 @@ def _annotate_inbounds_available(svc, exclude_cutting_id: str = "") -> list:
     return annotated
 
 
+def _orders_for_cutting_form(svc, current_order_id: str = "") -> list:
+    """재단 폼 ‘연결 주문’ 드롭다운용 목록.
+    - 취소된 주문은 제외
+    - 수정 모드에서는 현재 주문은 상태와 무관하게 항상 포함
+    """
+    excluded = {"취소"}
+    return [
+        o for o in svc.get_all("ORDER")
+        if o.get("status") not in excluded or o.get("order_id") == current_order_id
+    ]
+
+
 def _validate_cutting_qty(
     svc,
     inbound_id: str,
@@ -138,7 +150,7 @@ async def cutting_new(request: Request):
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
     inbounds = _annotate_inbounds_available(svc)
-    orders = svc.get_all("ORDER")
+    orders = _orders_for_cutting_form(svc)
     players = svc.get_all("PLAYER_MASTER")
     return templates.TemplateResponse(request, "cutting/form.html", {
         "user": user, "item": None,
@@ -181,7 +193,7 @@ async def cutting_create(
         return templates.TemplateResponse(request, "cutting/form.html", {
             "user": user, "item": submitted,
             "inbounds": _annotate_inbounds_available(svc),
-            "orders": svc.get_all("ORDER"),
+            "orders": _orders_for_cutting_form(svc, order_id),
             "players": svc.get_all("PLAYER_MASTER"), "action": "create",
             "auto_manager": manager,
             "error": error_message,
@@ -231,7 +243,7 @@ async def cutting_edit(request: Request, cutting_id: str):
     if not item.get("manager") and item.get("worker"):
         item["manager"] = item["worker"]
     inbounds = _annotate_inbounds_available(svc, exclude_cutting_id=cutting_id)
-    orders = svc.get_all("ORDER")
+    orders = _orders_for_cutting_form(svc, item.get("order_id", ""))
     players = svc.get_all("PLAYER_MASTER")
     return templates.TemplateResponse(request, "cutting/form.html", {
         "user": user, "item": item,
@@ -279,7 +291,7 @@ async def cutting_update(
         return templates.TemplateResponse(request, "cutting/form.html", {
             "user": user, "item": submitted,
             "inbounds": _annotate_inbounds_available(svc, exclude_cutting_id=cutting_id),
-            "orders": svc.get_all("ORDER"),
+            "orders": _orders_for_cutting_form(svc, order_id),
             "players": svc.get_all("PLAYER_MASTER"), "action": "edit",
             "auto_manager": manager,
             "error": error_message,
