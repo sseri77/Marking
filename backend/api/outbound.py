@@ -70,18 +70,31 @@ async def outbound_list(request: Request, q: str = "", page: int = 1):
 
 
 @router.get("/outbound/new", response_class=HTMLResponse)
-async def outbound_new(request: Request):
+async def outbound_new(request: Request, order_id: str = "", cutting_id: str = ""):
     user = require_auth(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
     cuttings = _build_cutting_options(svc, completed_only=True)
     stores = [s for s in svc.get_all("STORE_MASTER") if s.get("status", "활성") == "활성"]
+
+    # 재고/타 화면에서 들어온 사전 선택값 계산
+    preselect_ids: set[str] = set()
+    if cutting_id:
+        preselect_ids.add(cutting_id)
+    if order_id:
+        cutting_to_order = {c.get("cutting_id"): c.get("order_id", "")
+                            for c in svc.get_all("CUTTING_PROCESS")}
+        for opt in cuttings:
+            if cutting_to_order.get(opt["cutting_id"]) == order_id:
+                preselect_ids.add(opt["cutting_id"])
+
     return templates.TemplateResponse(request, "outbound/form.html", {
         "user": user, "item": None,
         "cuttings": cuttings, "stores": stores,
         "today": today_str(), "action": "create",
         "auto_manager": user["username"],
+        "preselect_cutting_ids": preselect_ids,
     })
 
 
