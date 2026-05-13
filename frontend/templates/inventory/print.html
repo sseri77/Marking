@@ -63,7 +63,8 @@
         <table class="inv-table">
             <thead>
                 <tr>
-                    <th>건수</th><th>총 주문</th><th>입고</th><th>재단 완료</th><th>출고</th><th>보유 재고</th><th>미출고 잔량</th>
+                    <th>건수</th><th>총 주문</th><th>입고</th><th>재단 완료</th><th>출고</th>
+                    <th>미재단 잔량</th><th>재단됨 잔량</th><th>재고 합계</th>
                 </tr>
             </thead>
             <tbody>
@@ -73,8 +74,9 @@
                     <td class="num">{{ summary.total_inbound }}</td>
                     <td class="num">{{ summary.total_cut_success }}</td>
                     <td class="num">{{ summary.total_outbound }}</td>
-                    <td class="num font-bold {% if summary.total_on_hand > 0 %}text-amber-700{% endif %}">{{ summary.total_on_hand }}</td>
-                    <td class="num font-bold {% if summary.total_remaining > 0 %}text-red-600{% endif %}">{{ summary.total_remaining }}</td>
+                    <td class="num font-semibold {% if summary.total_stock_waiting_cut > 0 %}text-blue-700{% endif %}">{{ summary.total_stock_waiting_cut }}</td>
+                    <td class="num font-semibold {% if summary.total_on_hand > 0 %}text-amber-700{% endif %}">{{ summary.total_on_hand }}</td>
+                    <td class="num font-bold {% if summary.total_stock_total > 0 %}text-emerald-700{% endif %}">{{ summary.total_stock_total }}</td>
                 </tr>
             </tbody>
         </table>
@@ -88,11 +90,12 @@
             <thead>
                 <tr>
                     <th>구단</th>
-                    <th class="num" style="width:80px">주문</th>
-                    <th class="num" style="width:80px">재단</th>
-                    <th class="num" style="width:80px">출고</th>
-                    <th class="num" style="width:80px">보유 재고</th>
-                    <th class="num" style="width:80px">잔량</th>
+                    <th class="num" style="width:70px">주문</th>
+                    <th class="num" style="width:70px">재단</th>
+                    <th class="num" style="width:70px">출고</th>
+                    <th class="num" style="width:80px">미재단 잔량</th>
+                    <th class="num" style="width:80px">재단됨 잔량</th>
+                    <th class="num" style="width:80px">재고 합계</th>
                 </tr>
             </thead>
             <tbody>
@@ -102,8 +105,9 @@
                     <td class="num">{{ t.ordered }}</td>
                     <td class="num">{{ t.cut_success }}</td>
                     <td class="num">{{ t.outbound }}</td>
-                    <td class="num font-semibold {% if t.on_hand > 0 %}text-amber-700{% endif %}">{{ t.on_hand }}</td>
-                    <td class="num font-semibold {% if t.remaining > 0 %}text-red-600{% endif %}">{{ t.remaining }}</td>
+                    <td class="num {% if t.stock_waiting_cut > 0 %}text-blue-700 font-semibold{% endif %}">{{ t.stock_waiting_cut }}</td>
+                    <td class="num {% if t.on_hand > 0 %}text-amber-700 font-semibold{% endif %}">{{ t.on_hand }}</td>
+                    <td class="num font-bold {% if t.stock_total > 0 %}text-emerald-700{% endif %}">{{ t.stock_total }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -120,19 +124,20 @@
                     <th style="width:80px">주문일</th>
                     <th>구단 / 콜라보</th>
                     <th>선수</th>
-                    <th class="num" style="width:50px">주문</th>
-                    <th class="num" style="width:50px">입고</th>
-                    <th class="num" style="width:50px">재단</th>
-                    <th class="num" style="width:50px">불량</th>
-                    <th class="num" style="width:50px">출고</th>
-                    <th class="num" style="width:50px">보유</th>
-                    <th class="num" style="width:50px">잔량</th>
+                    <th class="num" style="width:48px">주문</th>
+                    <th class="num" style="width:48px">입고</th>
+                    <th class="num" style="width:48px">재단</th>
+                    <th class="num" style="width:48px">불량</th>
+                    <th class="num" style="width:48px">출고</th>
+                    <th class="num" style="width:60px">미재단 잔량</th>
+                    <th class="num" style="width:60px">재단됨 잔량</th>
+                    <th class="num" style="width:60px">재고 합계</th>
                     <th style="width:70px">상태</th>
                 </tr>
             </thead>
             <tbody>
                 {% for r in rows %}
-                <tr>
+                <tr {% if r.stock_total > 0 %}class="bg-emerald-50/30"{% endif %}>
                     <td>{{ r.order_date }}</td>
                     <td>
                         <div class="font-medium">{{ r.club_name }}</div>
@@ -147,15 +152,16 @@
                     <td class="num">{{ r.cut_success }}</td>
                     <td class="num">{{ r.cut_defect }}</td>
                     <td class="num">{{ r.outbound }}</td>
-                    <td class="num font-semibold {% if r.on_hand > 0 %}text-amber-700{% endif %}">{{ r.on_hand }}</td>
-                    <td class="num font-semibold {% if r.remaining > 0 %}text-red-600{% endif %}">{{ r.remaining }}</td>
+                    <td class="num {% if r.stock_waiting_cut > 0 %}text-blue-700 font-semibold{% endif %}">{{ r.stock_waiting_cut }}</td>
+                    <td class="num {% if r.on_hand > 0 %}text-amber-700 font-semibold{% endif %}">{{ r.on_hand }}</td>
+                    <td class="num font-bold {% if r.stock_total > 0 %}text-emerald-700{% endif %}">{{ r.stock_total }}</td>
                     <td>
                         {{ r.status or '-' }}
                         {% if r.awaiting_reinbound %}<span class="text-rose-600 font-semibold"> · 재입고 대기</span>{% endif %}
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="11" class="text-center text-gray-400 py-6">조건에 맞는 재고가 없습니다.</td></tr>
+                <tr><td colspan="12" class="text-center text-gray-400 py-6">조건에 맞는 재고가 없습니다.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
