@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import importlib
 from typing import Any, Optional
 from datetime import datetime
@@ -43,12 +44,19 @@ SHEET_FIELD_MIGRATIONS = {
 }
 
 
+CACHE_TTL_SECONDS = 30
+
+
 class SheetsService:
     def __init__(self):
         self._client: Optional[gspread.Client] = None
         self._spreadsheet: Optional[gspread.Spreadsheet] = None
         self._demo_mode = False
         self._schema_checked: set[str] = set()
+        self._cache: dict[str, tuple[float, list[dict]]] = {}
+
+    def _invalidate_cache(self, sheet_name: str) -> None:
+        self._cache.pop(sheet_name, None)
 
     def _try_import_gspread(self):
         global _GSPREAD_AVAILABLE
@@ -184,10 +192,15 @@ class SheetsService:
             print(f"[Sheets] {sheet_name} 마이그레이션 쓰기 실패: {e}")
 
     def get_all(self, sheet_name: str) -> list[dict]:
+        now = time.time()
+        cached = self._cache.get(sheet_name)
+        if cached and (now - cached[0]) < CACHE_TTL_SECONDS:
+            return cached[1]
         sheet = self._get_sheet(sheet_name)
         if not sheet:
             return self._get_demo_data(sheet_name)
         records = sheet.get_all_records()
+        self._cache[sheet_name] = (now, records)
         return records
 
     def append_row(self, sheet_name: str, data: dict) -> dict:
@@ -197,6 +210,7 @@ class SheetsService:
         headers = SHEET_HEADERS.get(sheet_name, list(data.keys()))
         row = [str(data.get(h, "")) for h in headers]
         sheet.append_row(row)
+        self._invalidate_cache(sheet_name)
         return data
 
     def update_row(self, sheet_name: str, id_field: str, id_value: str, data: dict) -> bool:
@@ -211,6 +225,7 @@ class SheetsService:
                 data["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 row = [str(data.get(h, record.get(h, ""))) for h in headers]
                 sheet.update(f"A{row_num}", [row])
+                self._invalidate_cache(sheet_name)
                 return True
         return False
 
@@ -222,6 +237,7 @@ class SheetsService:
         for i, record in enumerate(records):
             if str(record.get(id_field)) == str(id_value):
                 sheet.delete_rows(i + 2)
+                self._invalidate_cache(sheet_name)
                 return True
         return False
 
