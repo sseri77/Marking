@@ -15,6 +15,42 @@ def _get_locked_cutting_ids(svc) -> set[str]:
     return {(o.get("cutting_id") or "").strip() for o in outbounds if (o.get("cutting_id") or "").strip()}
 
 
+def _safe_int(value, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _used_input_by_inbound(svc, exclude_cutting_id: str = "") -> dict:
+    used: dict = {}
+    for c in svc.get_all("CUTTING_PROCESS"):
+        if c.get("cutting_id") == exclude_cutting_id:
+            continue
+        used[c.get("inbound_id", "")] = used.get(c.get("inbound_id", ""), 0) + _safe_int(c.get("input_qty"))
+    return used
+
+
+def _available_input_qty(svc, inbound_id: str, exclude_cutting_id: str = "") -> int:
+    """해당 입고에서 아직 재단에 투입되지 않은 잔여 수량."""
+    if not inbound_id:
+        return 0
+    inbound = next((r for r in svc.get_all("ROLL_INBOUND") if r.get("inbound_id") == inbound_id), None)
+    if not inbound:
+        return 0
+    return _safe_int(inbound.get("inbound_qty")) - _used_input_by_inbound(svc, exclude_cutting_id).get(inbound_id, 0)
+
+
+def _annotate_inbounds_available(svc, exclude_cutting_id: str = "") -> list:
+    """입고 목록에 available_qty 필드를 붙인 새 리스트를 반환한다(원본 캐시 보호)."""
+    used = _used_input_by_inbound(svc, exclude_cutting_id)
+    annotated = []
+    for ib in svc.get_all("ROLL_INBOUND"):
+        total = _safe_int(ib.get("inbound_qty"))
+        annotated.append({**ib, "available_qty": max(total - used.get(ib.get("inbound_id", ""), 0), 0)})
+    return annotated
+
+
 def _create_defect_reorder(svc, cutting_id: str, original_order_id: str, defect_qty: int) -> None:
     """재단완료 시점에 불량 수량만큼 동일 선수로 새 주문을 등록한다.
     동일 cutting_id 기준으로 이미 생성된 재발주가 있으면 중복 생성하지 않는다."""
@@ -69,7 +105,7 @@ async def cutting_new(request: Request):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
-    inbounds = svc.get_all("ROLL_INBOUND")
+    inbounds = _annotate_inbounds_available(svc)
     orders = svc.get_all("ORDER")
     players = svc.get_all("PLAYER_MASTER")
     return templates.TemplateResponse(request, "cutting/form.html", {
@@ -99,16 +135,31 @@ async def cutting_create(
     user = require_auth(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
+    svc = get_sheets_service()
+    submitted = {
+        "inbound_id": inbound_id, "order_id": order_id,
+        "club_name": club_name, "collab_name": collab_name,
+        "player_name": player_name, "player_number": player_number,
+        "input_qty": input_qty, "success_qty": success_qty,
+        "defect_qty": defect_qty, "loss_qty": loss_qty,
+        "status": status, "manager": manager, "memo": memo,
+    }
+    error_message = None
     if success_qty > input_qty:
-        svc = get_sheets_service()
+        error_message = "성공수량은 투입수량을 초과할 수 없습니다."
+    else:
+        available = _available_input_qty(svc, inbound_id)
+        if input_qty > available:
+            error_message = f"투입수량({input_qty}장)이 입고 잔여 수량({available}장)을 초과합니다."
+    if error_message:
         return templates.TemplateResponse(request, "cutting/form.html", {
-            "user": user, "item": None,
-            "inbounds": svc.get_all("ROLL_INBOUND"), "orders": svc.get_all("ORDER"),
+            "user": user, "item": submitted,
+            "inbounds": _annotate_inbounds_available(svc),
+            "orders": svc.get_all("ORDER"),
             "players": svc.get_all("PLAYER_MASTER"), "action": "create",
             "auto_manager": manager,
-            "error": "성공수량은 투입수량을 초과할 수 없습니다.",
+            "error": error_message,
         })
-    svc = get_sheets_service()
     cutting_id = generate_id("CUT")
     svc.append_row(SHEET, {
         "cutting_id": cutting_id,
@@ -146,7 +197,7 @@ async def cutting_edit(request: Request, cutting_id: str):
     # 기존 데이터에 worker 필드가 있으면 manager로 마이그레이션
     if not item.get("manager") and item.get("worker"):
         item["manager"] = item["worker"]
-    inbounds = svc.get_all("ROLL_INBOUND")
+    inbounds = _annotate_inbounds_available(svc, exclude_cutting_id=cutting_id)
     orders = svc.get_all("ORDER")
     players = svc.get_all("PLAYER_MASTER")
     return templates.TemplateResponse(request, "cutting/form.html", {
@@ -178,6 +229,31 @@ async def cutting_update(
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
+    submitted = {
+        "cutting_id": cutting_id,
+        "inbound_id": inbound_id, "order_id": order_id,
+        "club_name": club_name, "collab_name": collab_name,
+        "player_name": player_name, "player_number": player_number,
+        "input_qty": input_qty, "success_qty": success_qty,
+        "defect_qty": defect_qty, "loss_qty": loss_qty,
+        "status": status, "manager": manager, "memo": memo,
+    }
+    error_message = None
+    if success_qty > input_qty:
+        error_message = "성공수량은 투입수량을 초과할 수 없습니다."
+    else:
+        available = _available_input_qty(svc, inbound_id, exclude_cutting_id=cutting_id)
+        if input_qty > available:
+            error_message = f"투입수량({input_qty}장)이 입고 잔여 수량({available}장)을 초과합니다."
+    if error_message:
+        return templates.TemplateResponse(request, "cutting/form.html", {
+            "user": user, "item": submitted,
+            "inbounds": _annotate_inbounds_available(svc, exclude_cutting_id=cutting_id),
+            "orders": svc.get_all("ORDER"),
+            "players": svc.get_all("PLAYER_MASTER"), "action": "edit",
+            "auto_manager": manager,
+            "error": error_message,
+        })
     svc.update_row(SHEET, "cutting_id", cutting_id, {
         "inbound_id": inbound_id, "order_id": order_id,
         "club_name": club_name, "collab_name": collab_name,
