@@ -68,6 +68,16 @@ def _build_inventory_rows(svc):
         remaining = max(ordered - out_qty, 0)
         on_hand = max(cut["success"] - out_qty, 0)
         parent_order_id = o.get("parent_order_id", "")
+
+        # 권장 시스템 계산 구조:
+        #   주문수량 = 정상완료(success) + 불량(defect) + 로스(loss)
+        #            + 재단대기재고(입고됐으나 아직 재단투입 안 됨)
+        #            + 미입고수량(아직 입고 안 됨)
+        not_inbound = max(ordered - inbound_qty, 0)
+        stock_waiting_cut = max(inbound_qty - cut["input"], 0)
+        equation_total = cut["success"] + cut["defect"] + cut["loss"] + stock_waiting_cut + not_inbound
+        equation_diff = ordered - equation_total
+
         rows.append({
             "order_id": oid,
             "order_date": o.get("order_date", ""),
@@ -85,6 +95,11 @@ def _build_inventory_rows(svc):
             "outbound": out_qty,
             "on_hand": on_hand,
             "remaining": remaining,
+            "not_inbound": not_inbound,
+            "stock_waiting_cut": stock_waiting_cut,
+            "equation_total": equation_total,
+            "equation_diff": equation_diff,
+            "equation_ok": equation_diff == 0,
             "parent_order_id": parent_order_id,
             "awaiting_reinbound": bool(parent_order_id) and oid not in inbound_order_ids,
         })
@@ -111,6 +126,10 @@ def _filter_rows(all_rows, q: str, club: str, status: str, stock_filter: str):
         rows = [r for r in rows if r["remaining"] == 0 and r["ordered"] > 0]
     elif stock_filter == "awaiting_reinbound":
         rows = [r for r in rows if r["awaiting_reinbound"]]
+    elif stock_filter == "not_inbound":
+        rows = [r for r in rows if r["not_inbound"] > 0]
+    elif stock_filter == "equation_mismatch":
+        rows = [r for r in rows if not r["equation_ok"]]
     rows.sort(key=lambda r: r["order_date"], reverse=True)
     return rows
 
@@ -134,9 +153,14 @@ async def inventory_status(
         "total_ordered": sum(r["ordered"] for r in rows),
         "total_inbound": sum(r["inbound"] for r in rows),
         "total_cut_success": sum(r["cut_success"] for r in rows),
+        "total_cut_defect": sum(r["cut_defect"] for r in rows),
+        "total_cut_loss": sum(r["cut_loss"] for r in rows),
         "total_outbound": sum(r["outbound"] for r in rows),
         "total_on_hand": sum(r["on_hand"] for r in rows),
         "total_remaining": sum(r["remaining"] for r in rows),
+        "total_not_inbound": sum(r["not_inbound"] for r in rows),
+        "total_stock_waiting_cut": sum(r["stock_waiting_cut"] for r in rows),
+        "equation_mismatch_count": sum(1 for r in rows if not r["equation_ok"]),
     }
 
     club_totals = defaultdict(lambda: {"ordered": 0, "cut_success": 0, "outbound": 0, "on_hand": 0, "remaining": 0})
@@ -185,9 +209,14 @@ async def inventory_print(
         "total_ordered": sum(r["ordered"] for r in rows),
         "total_inbound": sum(r["inbound"] for r in rows),
         "total_cut_success": sum(r["cut_success"] for r in rows),
+        "total_cut_defect": sum(r["cut_defect"] for r in rows),
+        "total_cut_loss": sum(r["cut_loss"] for r in rows),
         "total_outbound": sum(r["outbound"] for r in rows),
         "total_on_hand": sum(r["on_hand"] for r in rows),
         "total_remaining": sum(r["remaining"] for r in rows),
+        "total_not_inbound": sum(r["not_inbound"] for r in rows),
+        "total_stock_waiting_cut": sum(r["stock_waiting_cut"] for r in rows),
+        "equation_mismatch_count": sum(1 for r in rows if not r["equation_ok"]),
     }
 
     club_totals = defaultdict(lambda: {"ordered": 0, "cut_success": 0, "outbound": 0, "on_hand": 0, "remaining": 0})
@@ -205,6 +234,8 @@ async def inventory_print(
         "shortage": "재단 미완료",
         "completed": "출고 완료",
         "awaiting_reinbound": "재입고 대기",
+        "not_inbound": "미입고 잔량 있음",
+        "equation_mismatch": "등식 불일치",
     }
     filters = {
         "검색어": q,

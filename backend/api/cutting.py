@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from backend.services.sheets_service import get_sheets_service
 from backend.utils.helpers import generate_id, now_str, today_str, require_auth, paginate
+from backend.utils.audit_log import log_create, log_update, log_delete
 
 router = APIRouter()
 templates = Jinja2Templates(directory="frontend/templates")
@@ -49,6 +50,37 @@ def _annotate_inbounds_available(svc, exclude_cutting_id: str = "") -> list:
         total = _safe_int(ib.get("inbound_qty"))
         annotated.append({**ib, "available_qty": max(total - used.get(ib.get("inbound_id", ""), 0), 0)})
     return annotated
+
+
+def _validate_cutting_qty(
+    svc,
+    inbound_id: str,
+    input_qty: int,
+    success_qty: int,
+    defect_qty: int,
+    loss_qty: int,
+    exclude_cutting_id: str = "",
+) -> str | None:
+    """재단 수량 정합성 검증.
+
+    - input_qty == success_qty + defect_qty + loss_qty
+    - input_qty 는 해당 입고의 잔여 가용 수량을 초과할 수 없다
+    - 각 수량은 음수일 수 없다
+
+    위반 시 한국어 오류 메시지 문자열을 반환, 정상이면 None.
+    """
+    if input_qty < 0 or success_qty < 0 or defect_qty < 0 or loss_qty < 0:
+        return "수량은 0 이상이어야 합니다."
+    total = success_qty + defect_qty + loss_qty
+    if input_qty != total:
+        return (
+            f"투입수량({input_qty}장)이 성공({success_qty}) + 불량({defect_qty}) + 로스({loss_qty}) "
+            f"= {total}장과 일치해야 합니다."
+        )
+    available = _available_input_qty(svc, inbound_id, exclude_cutting_id=exclude_cutting_id)
+    if input_qty > available:
+        return f"투입수량({input_qty}장)이 입고 잔여 수량({available}장)을 초과합니다."
+    return None
 
 
 def _create_defect_reorder(svc, cutting_id: str, original_order_id: str, defect_qty: int) -> None:
@@ -144,13 +176,7 @@ async def cutting_create(
         "defect_qty": defect_qty, "loss_qty": loss_qty,
         "status": status, "manager": manager, "memo": memo,
     }
-    error_message = None
-    if success_qty > input_qty:
-        error_message = "성공수량은 투입수량을 초과할 수 없습니다."
-    else:
-        available = _available_input_qty(svc, inbound_id)
-        if input_qty > available:
-            error_message = f"투입수량({input_qty}장)이 입고 잔여 수량({available}장)을 초과합니다."
+    error_message = _validate_cutting_qty(svc, inbound_id, input_qty, success_qty, defect_qty, loss_qty)
     if error_message:
         return templates.TemplateResponse(request, "cutting/form.html", {
             "user": user, "item": submitted,
@@ -178,6 +204,13 @@ async def cutting_create(
         "memo": memo,
         "created_at": now_str(),
     })
+    log_create(
+        svc, entity="CUTTING_PROCESS", entity_id=cutting_id,
+        data={"input_qty": input_qty, "success_qty": success_qty,
+              "defect_qty": defect_qty, "loss_qty": loss_qty},
+        user=user.get("username", ""), related_order_id=order_id,
+        memo=f"inbound_id={inbound_id}",
+    )
     if status == "완료":
         svc.update_row("ORDER", "order_id", order_id, {"status": "재단완료"})
         _create_defect_reorder(svc, cutting_id, order_id, defect_qty)
@@ -238,13 +271,10 @@ async def cutting_update(
         "defect_qty": defect_qty, "loss_qty": loss_qty,
         "status": status, "manager": manager, "memo": memo,
     }
-    error_message = None
-    if success_qty > input_qty:
-        error_message = "성공수량은 투입수량을 초과할 수 없습니다."
-    else:
-        available = _available_input_qty(svc, inbound_id, exclude_cutting_id=cutting_id)
-        if input_qty > available:
-            error_message = f"투입수량({input_qty}장)이 입고 잔여 수량({available}장)을 초과합니다."
+    error_message = _validate_cutting_qty(
+        svc, inbound_id, input_qty, success_qty, defect_qty, loss_qty,
+        exclude_cutting_id=cutting_id,
+    )
     if error_message:
         return templates.TemplateResponse(request, "cutting/form.html", {
             "user": user, "item": submitted,
@@ -254,6 +284,16 @@ async def cutting_update(
             "auto_manager": manager,
             "error": error_message,
         })
+
+    # 변경 전 원본 (audit 비교용)
+    before_item = next((r for r in svc.get_all(SHEET) if r.get("cutting_id") == cutting_id), {})
+    before_qty = {
+        "input_qty": _safe_int(before_item.get("input_qty")),
+        "success_qty": _safe_int(before_item.get("success_qty")),
+        "defect_qty": _safe_int(before_item.get("defect_qty")),
+        "loss_qty": _safe_int(before_item.get("loss_qty")),
+    }
+
     svc.update_row(SHEET, "cutting_id", cutting_id, {
         "inbound_id": inbound_id, "order_id": order_id,
         "club_name": club_name, "collab_name": collab_name,
@@ -262,6 +302,14 @@ async def cutting_update(
         "defect_qty": defect_qty, "loss_qty": loss_qty,
         "status": status, "manager": manager, "memo": memo,
     })
+    log_update(
+        svc, entity="CUTTING_PROCESS", entity_id=cutting_id,
+        before_data=before_qty,
+        after_data={"input_qty": input_qty, "success_qty": success_qty,
+                    "defect_qty": defect_qty, "loss_qty": loss_qty},
+        user=user.get("username", ""), related_order_id=order_id,
+        memo=f"inbound_id={inbound_id}",
+    )
     if status == "완료":
         svc.update_row("ORDER", "order_id", order_id, {"status": "재단완료"})
         _create_defect_reorder(svc, cutting_id, order_id, defect_qty)
@@ -277,7 +325,21 @@ async def cutting_delete(request: Request, cutting_id: str):
     # 출고에 사용된 재단은 삭제 차단
     if cutting_id in _get_locked_cutting_ids(svc):
         return RedirectResponse(url="/cutting?error=delete_locked", status_code=303)
+    before_item = next((r for r in svc.get_all(SHEET) if r.get("cutting_id") == cutting_id), None)
     svc.delete_row(SHEET, "cutting_id", cutting_id)
+    if before_item:
+        log_delete(
+            svc, entity="CUTTING_PROCESS", entity_id=cutting_id,
+            before_data={
+                "input_qty": _safe_int(before_item.get("input_qty")),
+                "success_qty": _safe_int(before_item.get("success_qty")),
+                "defect_qty": _safe_int(before_item.get("defect_qty")),
+                "loss_qty": _safe_int(before_item.get("loss_qty")),
+            },
+            user=user.get("username", ""),
+            related_order_id=before_item.get("order_id", ""),
+            memo=f"inbound_id={before_item.get('inbound_id','')}",
+        )
     return RedirectResponse(url="/cutting", status_code=303)
 
 
