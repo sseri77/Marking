@@ -23,32 +23,51 @@ def _safe_int(value, default: int = 0) -> int:
         return default
 
 
-def _used_input_by_inbound(svc, exclude_cutting_id: str = "") -> dict:
+def _used_input_by_inbound_order(svc, exclude_cutting_id: str = "") -> dict:
+    """(inbound_id, order_id) 별 누적 투입 수량.
+
+    1장에 여러 선수가 인쇄되는 경우, 입고 1장은 묶인 각 선수에 대해 1회씩
+    독립적으로 재단될 수 있으므로 잔여는 (입고, 선수) 단위로 추적해야 한다.
+    """
     used: dict = {}
     for c in svc.get_all("CUTTING_PROCESS"):
         if c.get("cutting_id") == exclude_cutting_id:
             continue
-        used[c.get("inbound_id", "")] = used.get(c.get("inbound_id", ""), 0) + _safe_int(c.get("input_qty"))
+        key = (c.get("inbound_id", ""), c.get("order_id", ""))
+        used[key] = used.get(key, 0) + _safe_int(c.get("input_qty"))
     return used
 
 
-def _available_input_qty(svc, inbound_id: str, exclude_cutting_id: str = "") -> int:
-    """해당 입고에서 아직 재단에 투입되지 않은 잔여 수량."""
+def _available_input_qty(svc, inbound_id: str, order_id: str, exclude_cutting_id: str = "") -> int:
+    """해당 입고-선수 조합에서 아직 재단에 투입되지 않은 잔여 수량."""
     if not inbound_id:
         return 0
     inbound = next((r for r in svc.get_all("ROLL_INBOUND") if r.get("inbound_id") == inbound_id), None)
     if not inbound:
         return 0
-    return _safe_int(inbound.get("inbound_qty")) - _used_input_by_inbound(svc, exclude_cutting_id).get(inbound_id, 0)
+    used = _used_input_by_inbound_order(svc, exclude_cutting_id).get((inbound_id, order_id), 0)
+    return _safe_int(inbound.get("inbound_qty")) - used
 
 
 def _annotate_inbounds_available(svc, exclude_cutting_id: str = "") -> list:
-    """입고 목록에 available_qty 필드를 붙인 새 리스트를 반환한다(원본 캐시 보호)."""
-    used = _used_input_by_inbound(svc, exclude_cutting_id)
+    """입고 목록에 선수별 잔여 정보를 붙인 새 리스트를 반환한다(원본 캐시 보호).
+
+    - ``available_qty``: 묶인 선수들 중 가장 많이 남아있는 선수의 잔여(대표값).
+    - ``remaining_per_order``: ``{order_id: 잔여수량}`` 매핑. 폼에서 선수 선택 시 사용.
+    """
+    used = _used_input_by_inbound_order(svc, exclude_cutting_id)
     annotated = []
     for ib in svc.get_all("ROLL_INBOUND"):
+        inb_id = ib.get("inbound_id", "")
         total = _safe_int(ib.get("inbound_qty"))
-        annotated.append({**ib, "available_qty": max(total - used.get(ib.get("inbound_id", ""), 0), 0)})
+        order_ids = [o.strip() for o in str(ib.get("order_ids", "")).split(",") if o.strip()]
+        per_order = {oid: max(total - used.get((inb_id, oid), 0), 0) for oid in order_ids}
+        available = max(per_order.values()) if per_order else total
+        annotated.append({
+            **ib,
+            "available_qty": max(available, 0),
+            "remaining_per_order": per_order,
+        })
     return annotated
 
 
@@ -67,6 +86,7 @@ def _orders_for_cutting_form(svc, current_order_id: str = "") -> list:
 def _validate_cutting_qty(
     svc,
     inbound_id: str,
+    order_id: str,
     input_qty: int,
     success_qty: int,
     defect_qty: int,
@@ -76,7 +96,8 @@ def _validate_cutting_qty(
     """재단 수량 정합성 검증.
 
     - input_qty == success_qty + defect_qty + loss_qty
-    - input_qty 는 해당 입고의 잔여 가용 수량을 초과할 수 없다
+    - input_qty 는 해당 입고-선수 조합의 잔여 가용 수량을 초과할 수 없다
+      (1장에 여러 선수가 인쇄되므로 잔여는 선수별로 독립 추적)
     - 각 수량은 음수일 수 없다
 
     위반 시 한국어 오류 메시지 문자열을 반환, 정상이면 None.
@@ -89,9 +110,9 @@ def _validate_cutting_qty(
             f"투입수량({input_qty}장)이 성공({success_qty}) + 불량({defect_qty}) + 로스({loss_qty}) "
             f"= {total}장과 일치해야 합니다."
         )
-    available = _available_input_qty(svc, inbound_id, exclude_cutting_id=exclude_cutting_id)
+    available = _available_input_qty(svc, inbound_id, order_id, exclude_cutting_id=exclude_cutting_id)
     if input_qty > available:
-        return f"투입수량({input_qty}장)이 입고 잔여 수량({available}장)을 초과합니다."
+        return f"투입수량({input_qty}장)이 해당 선수의 입고 잔여 수량({available}장)을 초과합니다."
     return None
 
 
@@ -188,7 +209,7 @@ async def cutting_create(
         "defect_qty": defect_qty, "loss_qty": loss_qty,
         "status": status, "manager": manager, "memo": memo,
     }
-    error_message = _validate_cutting_qty(svc, inbound_id, input_qty, success_qty, defect_qty, loss_qty)
+    error_message = _validate_cutting_qty(svc, inbound_id, order_id, input_qty, success_qty, defect_qty, loss_qty)
     if error_message:
         return templates.TemplateResponse(request, "cutting/form.html", {
             "user": user, "item": submitted,
@@ -284,7 +305,7 @@ async def cutting_update(
         "status": status, "manager": manager, "memo": memo,
     }
     error_message = _validate_cutting_qty(
-        svc, inbound_id, input_qty, success_qty, defect_qty, loss_qty,
+        svc, inbound_id, order_id, input_qty, success_qty, defect_qty, loss_qty,
         exclude_cutting_id=cutting_id,
     )
     if error_message:

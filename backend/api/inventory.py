@@ -23,6 +23,8 @@ def _build_inventory_rows(svc):
     cuttings = svc.get_all("CUTTING_PROCESS")
     outbounds = svc.get_all("STORE_OUTBOUND")
 
+    # 1장에 복수 선수가 인쇄돼 있으므로, 입고 1장은 묶인 모든 선수에게
+    # 각각 1장씩 할당된다(나눠 갖는 것이 아님).
     inbound_by_order = defaultdict(int)
     for ib in inbounds:
         oid_field = str(ib.get("order_ids", "")).strip()
@@ -30,11 +32,10 @@ def _build_inventory_rows(svc):
             continue
         ids = [s.strip() for s in oid_field.split(",") if s.strip()]
         qty = _safe_int(ib.get("inbound_qty"))
-        if not ids:
+        if not ids or not qty:
             continue
-        share = qty // len(ids) if qty else 0
         for oid in ids:
-            inbound_by_order[oid] += share
+            inbound_by_order[oid] += qty
 
     cutting_by_order = defaultdict(lambda: {"input": 0, "success": 0, "defect": 0, "loss": 0})
     for c in cuttings:
