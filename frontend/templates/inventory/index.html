@@ -23,61 +23,31 @@
             <div class="text-[11px] text-green-500 font-semibold uppercase tracking-wider">출고</div>
             <div class="mt-1 text-2xl font-bold text-gray-800 tabular-nums">{{ summary.total_outbound }}<span class="text-xs font-normal text-gray-400 ml-1">장</span></div>
         </div>
-        <div class="bg-amber-50 rounded-2xl border border-amber-100 p-4 shadow-sm">
-            <div class="text-[11px] text-amber-600 font-semibold uppercase tracking-wider">보유 재고</div>
-            <div class="mt-1 text-2xl font-bold text-amber-700 tabular-nums">{{ summary.total_on_hand }}<span class="text-xs font-normal text-amber-400 ml-1">장</span></div>
-            <div class="text-[10px] text-amber-500 mt-1">재단 완료 - 출고</div>
+        <div class="bg-blue-50 rounded-2xl border border-blue-100 p-4 shadow-sm">
+            <div class="text-[11px] text-blue-600 font-semibold uppercase tracking-wider">잔량 (미재단)</div>
+            <div class="mt-1 text-2xl font-bold text-blue-700 tabular-nums">{{ summary.total_stock_waiting_cut }}<span class="text-xs font-normal text-blue-400 ml-1">장</span></div>
+            <div class="text-[10px] text-blue-500 mt-1">입고 - 재단 투입</div>
         </div>
-        <div class="bg-red-50 rounded-2xl border border-red-100 p-4 shadow-sm">
-            <div class="text-[11px] text-red-600 font-semibold uppercase tracking-wider">미출고 잔량</div>
-            <div class="mt-1 text-2xl font-bold text-red-700 tabular-nums">{{ summary.total_remaining }}<span class="text-xs font-normal text-red-400 ml-1">장</span></div>
-            <div class="text-[10px] text-red-500 mt-1">주문 - 출고</div>
+        <div class="bg-amber-50 rounded-2xl border border-amber-100 p-4 shadow-sm">
+            <div class="text-[11px] text-amber-600 font-semibold uppercase tracking-wider">잔량 (재단됨)</div>
+            <div class="mt-1 text-2xl font-bold text-amber-700 tabular-nums">{{ summary.total_on_hand }}<span class="text-xs font-normal text-amber-400 ml-1">장</span></div>
+            <div class="text-[10px] text-amber-500 mt-1">정상완료 - 출고</div>
         </div>
     </div>
 
-    <!-- 권장 시스템 계산 구조 (등식 검증) -->
-    <div class="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-        <div class="flex items-center justify-between mb-2">
-            <div>
-                <div class="text-sm font-semibold text-gray-700">수량 추적 등식</div>
-                <div class="text-xs text-gray-500 mt-0.5">주문수량 = 정상완료 + 불량 + 로스 + 재단대기재고 + 미입고수량</div>
+    <!-- 재고 잔량 합계 카드 -->
+    <div class="bg-emerald-50 rounded-2xl border border-emerald-100 p-4 shadow-sm flex items-center justify-between">
+        <div>
+            <div class="text-[11px] text-emerald-600 font-semibold uppercase tracking-wider">재고 잔량 합계</div>
+            <div class="mt-1 text-2xl font-bold text-emerald-700 tabular-nums">
+                {{ summary.total_stock_total }}<span class="text-xs font-normal text-emerald-400 ml-1">장</span>
             </div>
-            {% if summary.equation_mismatch_count == 0 %}
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded">
-                ✓ 모든 주문 일치
-            </span>
-            {% else %}
-            <a href="?stock_filter=equation_mismatch" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100">
-                ⚠ {{ summary.equation_mismatch_count }}건 불일치 — 클릭하여 보기
-            </a>
-            {% endif %}
+            <div class="text-[10px] text-emerald-500 mt-1">미재단 + 재단됨 — 출고 후 실제 남은 원단 총량</div>
         </div>
-        <div class="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs">
-            <div class="px-3 py-2 bg-gray-50 rounded-lg">
-                <div class="text-gray-500">주문</div>
-                <div class="font-bold text-gray-800 tabular-nums">{{ summary.total_ordered }}</div>
-            </div>
-            <div class="px-3 py-2 bg-orange-50 rounded-lg">
-                <div class="text-orange-600">정상완료</div>
-                <div class="font-bold text-orange-700 tabular-nums">{{ summary.total_cut_success }}</div>
-            </div>
-            <div class="px-3 py-2 bg-rose-50 rounded-lg">
-                <div class="text-rose-600">불량</div>
-                <div class="font-bold text-rose-700 tabular-nums">{{ summary.total_cut_defect }}</div>
-            </div>
-            <div class="px-3 py-2 bg-pink-50 rounded-lg">
-                <div class="text-pink-600">로스</div>
-                <div class="font-bold text-pink-700 tabular-nums">{{ summary.total_cut_loss }}</div>
-            </div>
-            <div class="px-3 py-2 bg-blue-50 rounded-lg">
-                <div class="text-blue-600">재단대기재고</div>
-                <div class="font-bold text-blue-700 tabular-nums">{{ summary.total_stock_waiting_cut }}</div>
-            </div>
-            <div class="px-3 py-2 bg-amber-50 rounded-lg">
-                <div class="text-amber-600">미입고</div>
-                <div class="font-bold text-amber-700 tabular-nums">{{ summary.total_not_inbound }}</div>
-            </div>
-        </div>
+        <a href="?stock_filter=stock_total"
+            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-white border border-emerald-200 rounded-lg hover:bg-emerald-100">
+            재고 있는 항목만 보기 →
+        </a>
     </div>
 
     <!-- 필터 -->
@@ -110,12 +80,12 @@
                 <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">재고 필터</label>
                 <select name="stock_filter" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-blue-400">
                     <option value="" {% if not stock_filter %}selected{% endif %}>전체</option>
-                    <option value="on_hand" {% if stock_filter == 'on_hand' %}selected{% endif %}>보유 재고 있음</option>
+                    <option value="stock_total" {% if stock_filter == 'stock_total' %}selected{% endif %}>재고 잔량 있음</option>
+                    <option value="on_hand" {% if stock_filter == 'on_hand' %}selected{% endif %}>재단된 잔량 있음</option>
                     <option value="shortage" {% if stock_filter == 'shortage' %}selected{% endif %}>재단 미완료</option>
                     <option value="completed" {% if stock_filter == 'completed' %}selected{% endif %}>출고 완료</option>
                     <option value="awaiting_reinbound" {% if stock_filter == 'awaiting_reinbound' %}selected{% endif %}>재입고 대기</option>
                     <option value="not_inbound" {% if stock_filter == 'not_inbound' %}selected{% endif %}>미입고 잔량 있음</option>
-                    <option value="equation_mismatch" {% if stock_filter == 'equation_mismatch' %}selected{% endif %}>등식 불일치</option>
                 </select>
             </div>
             <div class="md:col-span-5 flex items-center gap-2">
@@ -147,8 +117,9 @@
                         <th class="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider">주문</th>
                         <th class="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider">재단</th>
                         <th class="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider">출고</th>
-                        <th class="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider">보유 재고</th>
-                        <th class="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider">잔량</th>
+                        <th class="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider">미재단 잔량</th>
+                        <th class="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider">재단됨 잔량</th>
+                        <th class="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider">재고 합계</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
@@ -158,8 +129,9 @@
                         <td class="px-5 py-2.5 text-right tabular-nums text-gray-700">{{ t.ordered }}</td>
                         <td class="px-5 py-2.5 text-right tabular-nums text-orange-600">{{ t.cut_success }}</td>
                         <td class="px-5 py-2.5 text-right tabular-nums text-green-600">{{ t.outbound }}</td>
-                        <td class="px-5 py-2.5 text-right tabular-nums font-semibold {% if t.on_hand > 0 %}text-amber-600{% else %}text-gray-400{% endif %}">{{ t.on_hand }}</td>
-                        <td class="px-5 py-2.5 text-right tabular-nums font-semibold {% if t.remaining > 0 %}text-red-600{% else %}text-gray-400{% endif %}">{{ t.remaining }}</td>
+                        <td class="px-5 py-2.5 text-right tabular-nums {% if t.stock_waiting_cut > 0 %}text-blue-600 font-semibold{% else %}text-gray-300{% endif %}">{{ t.stock_waiting_cut }}</td>
+                        <td class="px-5 py-2.5 text-right tabular-nums {% if t.on_hand > 0 %}text-amber-600 font-semibold{% else %}text-gray-300{% endif %}">{{ t.on_hand }}</td>
+                        <td class="px-5 py-2.5 text-right tabular-nums font-bold {% if t.stock_total > 0 %}text-emerald-700{% else %}text-gray-400{% endif %}">{{ t.stock_total }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -182,21 +154,20 @@
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">선수</th>
                         <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">주문</th>
                         <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">입고</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" title="아직 입고되지 않은 잔량">미입고</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" title="입고됐으나 아직 재단 투입 안 됨">재단대기</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" title="아직 입고되지 않은 주문 잔량">미입고</th>
                         <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">정상완료</th>
                         <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">불량</th>
                         <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">출고</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">보유</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">잔량</th>
-                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider" title="주문=정상+불량+로스+재단대기+미입고">등식</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" title="입고됐으나 아직 재단 투입 안 된 원단">미재단 잔량</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" title="재단 완료됐으나 아직 출고되지 않은 원단">재단됨 잔량</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider" title="미재단 + 재단됨 — 출고 후 실제 남은 총량">재고 합계</th>
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">상태</th>
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">액션</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     {% for r in rows %}
-                    <tr class="hover:bg-blue-50/30 {% if r.on_hand > 0 %}bg-amber-50/20{% endif %} {% if not r.equation_ok %}!bg-red-50/40{% endif %}">
+                    <tr class="hover:bg-blue-50/30 {% if r.stock_total > 0 %}bg-emerald-50/20{% endif %}">
                         <td class="px-4 py-2.5 text-gray-500 whitespace-nowrap text-xs">{{ r.order_date }}</td>
                         <td class="px-4 py-2.5">
                             <div class="font-medium text-gray-800">{{ r.club_name }}</div>
@@ -211,19 +182,12 @@
                         <td class="px-4 py-2.5 text-right tabular-nums font-semibold text-gray-800">{{ r.ordered }}</td>
                         <td class="px-4 py-2.5 text-right tabular-nums text-blue-600">{{ r.inbound }}</td>
                         <td class="px-4 py-2.5 text-right tabular-nums {% if r.not_inbound > 0 %}text-amber-600 font-semibold{% else %}text-gray-300{% endif %}">{{ r.not_inbound }}</td>
-                        <td class="px-4 py-2.5 text-right tabular-nums {% if r.stock_waiting_cut > 0 %}text-blue-600 font-semibold{% else %}text-gray-300{% endif %}">{{ r.stock_waiting_cut }}</td>
                         <td class="px-4 py-2.5 text-right tabular-nums text-orange-600">{{ r.cut_success }}</td>
                         <td class="px-4 py-2.5 text-right tabular-nums text-red-400">{{ r.cut_defect }}</td>
                         <td class="px-4 py-2.5 text-right tabular-nums text-green-600">{{ r.outbound }}</td>
-                        <td class="px-4 py-2.5 text-right tabular-nums font-semibold {% if r.on_hand > 0 %}text-amber-600{% else %}text-gray-400{% endif %}">{{ r.on_hand }}</td>
-                        <td class="px-4 py-2.5 text-right tabular-nums font-semibold {% if r.remaining > 0 %}text-red-600{% else %}text-gray-400{% endif %}">{{ r.remaining }}</td>
-                        <td class="px-4 py-2.5 text-center">
-                            {% if r.equation_ok %}
-                            <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded" title="등식 일치">✓</span>
-                            {% else %}
-                            <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded" title="등식 불일치: 주문 - (정상+불량+로스+재단대기+미입고) = {{ r.equation_diff }}">⚠ {{ r.equation_diff }}</span>
-                            {% endif %}
-                        </td>
+                        <td class="px-4 py-2.5 text-right tabular-nums {% if r.stock_waiting_cut > 0 %}text-blue-600 font-semibold{% else %}text-gray-300{% endif %}">{{ r.stock_waiting_cut }}</td>
+                        <td class="px-4 py-2.5 text-right tabular-nums {% if r.on_hand > 0 %}text-amber-600 font-semibold{% else %}text-gray-300{% endif %}">{{ r.on_hand }}</td>
+                        <td class="px-4 py-2.5 text-right tabular-nums font-bold {% if r.stock_total > 0 %}text-emerald-700{% else %}text-gray-400{% endif %}">{{ r.stock_total }}</td>
                         <td class="px-4 py-2.5 text-center">
                             <div class="flex flex-col items-center gap-1">
                                 {% set s = r.status %}
@@ -242,7 +206,7 @@
                                 {% if r.on_hand > 0 %}
                                 <a href="/outbound/new?order_id={{ r.order_id }}"
                                     class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded-md transition-colors"
-                                    title="보유 {{ r.on_hand }}장 출고 등록">
+                                    title="재단됨 잔량 {{ r.on_hand }}장 출고 등록">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
                                     출고하기
                                 </a>
@@ -252,7 +216,7 @@
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="15" class="px-4 py-12 text-center text-gray-400">조건에 맞는 재고가 없습니다.</td></tr>
+                    <tr><td colspan="14" class="px-4 py-12 text-center text-gray-400">조건에 맞는 재고가 없습니다.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

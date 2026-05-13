@@ -69,14 +69,8 @@ def _build_inventory_rows(svc):
         on_hand = max(cut["success"] - out_qty, 0)
         parent_order_id = o.get("parent_order_id", "")
 
-        # 권장 시스템 계산 구조:
-        #   주문수량 = 정상완료(success) + 불량(defect) + 로스(loss)
-        #            + 재단대기재고(입고됐으나 아직 재단투입 안 됨)
-        #            + 미입고수량(아직 입고 안 됨)
         not_inbound = max(ordered - inbound_qty, 0)
         stock_waiting_cut = max(inbound_qty - cut["input"], 0)
-        equation_total = cut["success"] + cut["defect"] + cut["loss"] + stock_waiting_cut + not_inbound
-        equation_diff = ordered - equation_total
 
         rows.append({
             "order_id": oid,
@@ -97,9 +91,7 @@ def _build_inventory_rows(svc):
             "remaining": remaining,
             "not_inbound": not_inbound,
             "stock_waiting_cut": stock_waiting_cut,
-            "equation_total": equation_total,
-            "equation_diff": equation_diff,
-            "equation_ok": equation_diff == 0,
+            "stock_total": on_hand + stock_waiting_cut,
             "parent_order_id": parent_order_id,
             "awaiting_reinbound": bool(parent_order_id) and oid not in inbound_order_ids,
         })
@@ -128,8 +120,8 @@ def _filter_rows(all_rows, q: str, club: str, status: str, stock_filter: str):
         rows = [r for r in rows if r["awaiting_reinbound"]]
     elif stock_filter == "not_inbound":
         rows = [r for r in rows if r["not_inbound"] > 0]
-    elif stock_filter == "equation_mismatch":
-        rows = [r for r in rows if not r["equation_ok"]]
+    elif stock_filter == "stock_total":
+        rows = [r for r in rows if r["stock_total"] > 0]
     rows.sort(key=lambda r: r["order_date"], reverse=True)
     return rows
 
@@ -160,18 +152,22 @@ async def inventory_status(
         "total_remaining": sum(r["remaining"] for r in rows),
         "total_not_inbound": sum(r["not_inbound"] for r in rows),
         "total_stock_waiting_cut": sum(r["stock_waiting_cut"] for r in rows),
-        "equation_mismatch_count": sum(1 for r in rows if not r["equation_ok"]),
+        "total_stock_total": sum(r["stock_total"] for r in rows),
     }
 
-    club_totals = defaultdict(lambda: {"ordered": 0, "cut_success": 0, "outbound": 0, "on_hand": 0, "remaining": 0})
+    club_totals = defaultdict(lambda: {
+        "ordered": 0, "cut_success": 0, "outbound": 0,
+        "on_hand": 0, "stock_waiting_cut": 0, "stock_total": 0,
+    })
     for r in rows:
         ct = club_totals[r["club_name"] or "(미지정)"]
         ct["ordered"] += r["ordered"]
         ct["cut_success"] += r["cut_success"]
         ct["outbound"] += r["outbound"]
         ct["on_hand"] += r["on_hand"]
-        ct["remaining"] += r["remaining"]
-    club_summary = sorted(club_totals.items(), key=lambda kv: kv[1]["remaining"], reverse=True)
+        ct["stock_waiting_cut"] += r["stock_waiting_cut"]
+        ct["stock_total"] += r["stock_total"]
+    club_summary = sorted(club_totals.items(), key=lambda kv: kv[1]["stock_total"], reverse=True)
 
     all_clubs = sorted({r["club_name"] for r in all_rows if r["club_name"]})
     all_statuses = sorted({r["status"] for r in all_rows if r["status"]})
@@ -216,26 +212,30 @@ async def inventory_print(
         "total_remaining": sum(r["remaining"] for r in rows),
         "total_not_inbound": sum(r["not_inbound"] for r in rows),
         "total_stock_waiting_cut": sum(r["stock_waiting_cut"] for r in rows),
-        "equation_mismatch_count": sum(1 for r in rows if not r["equation_ok"]),
+        "total_stock_total": sum(r["stock_total"] for r in rows),
     }
 
-    club_totals = defaultdict(lambda: {"ordered": 0, "cut_success": 0, "outbound": 0, "on_hand": 0, "remaining": 0})
+    club_totals = defaultdict(lambda: {
+        "ordered": 0, "cut_success": 0, "outbound": 0,
+        "on_hand": 0, "stock_waiting_cut": 0, "stock_total": 0,
+    })
     for r in rows:
         ct = club_totals[r["club_name"] or "(미지정)"]
         ct["ordered"] += r["ordered"]
         ct["cut_success"] += r["cut_success"]
         ct["outbound"] += r["outbound"]
         ct["on_hand"] += r["on_hand"]
-        ct["remaining"] += r["remaining"]
-    club_summary = sorted(club_totals.items(), key=lambda kv: kv[1]["remaining"], reverse=True)
+        ct["stock_waiting_cut"] += r["stock_waiting_cut"]
+        ct["stock_total"] += r["stock_total"]
+    club_summary = sorted(club_totals.items(), key=lambda kv: kv[1]["stock_total"], reverse=True)
 
     stock_filter_labels = {
-        "on_hand": "보유 재고 있음",
+        "on_hand": "재단된 잔량 있음",
         "shortage": "재단 미완료",
         "completed": "출고 완료",
         "awaiting_reinbound": "재입고 대기",
         "not_inbound": "미입고 잔량 있음",
-        "equation_mismatch": "등식 불일치",
+        "stock_total": "재고 잔량 있음",
     }
     filters = {
         "검색어": q,
