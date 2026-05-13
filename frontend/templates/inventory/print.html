@@ -149,7 +149,10 @@
                     <td class="num">{{ r.outbound }}</td>
                     <td class="num font-semibold {% if r.on_hand > 0 %}text-amber-700{% endif %}">{{ r.on_hand }}</td>
                     <td class="num font-semibold {% if r.remaining > 0 %}text-red-600{% endif %}">{{ r.remaining }}</td>
-                    <td>{{ r.status or '-' }}</td>
+                    <td>
+                        {{ r.status or '-' }}
+                        {% if r.awaiting_reinbound %}<span class="text-rose-600 font-semibold"> · 재입고 대기</span>{% endif %}
+                    </td>
                 </tr>
                 {% else %}
                 <tr><td colspan="11" class="text-center text-gray-400 py-6">조건에 맞는 재고가 없습니다.</td></tr>

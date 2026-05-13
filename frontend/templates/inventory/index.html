@@ -68,6 +68,7 @@
                     <option value="on_hand" {% if stock_filter == 'on_hand' %}selected{% endif %}>보유 재고 있음</option>
                     <option value="shortage" {% if stock_filter == 'shortage' %}selected{% endif %}>재단 미완료</option>
                     <option value="completed" {% if stock_filter == 'completed' %}selected{% endif %}>출고 완료</option>
+                    <option value="awaiting_reinbound" {% if stock_filter == 'awaiting_reinbound' %}selected{% endif %}>재입고 대기</option>
                 </select>
             </div>
             <div class="md:col-span-5 flex items-center gap-2">
@@ -165,12 +166,17 @@
                         <td class="px-4 py-2.5 text-right tabular-nums font-semibold {% if r.on_hand > 0 %}text-amber-600{% else %}text-gray-400{% endif %}">{{ r.on_hand }}</td>
                         <td class="px-4 py-2.5 text-right tabular-nums font-semibold {% if r.remaining > 0 %}text-red-600{% else %}text-gray-400{% endif %}">{{ r.remaining }}</td>
                         <td class="px-4 py-2.5 text-center">
-                            {% set s = r.status %}
-                            {% if s == '주문완료' %}<span class="badge-gray">주문완료</span>
-                            {% elif s == '입고완료' %}<span class="badge-blue">입고완료</span>
-                            {% elif s == '재단완료' %}<span class="badge-orange">재단완료</span>
-                            {% elif s == '출고완료' %}<span class="badge-green">출고완료</span>
-                            {% else %}<span class="badge-gray">{{ s or '-' }}</span>{% endif %}
+                            <div class="flex flex-col items-center gap-1">
+                                {% set s = r.status %}
+                                {% if s == '주문완료' %}<span class="badge-gray">주문완료</span>
+                                {% elif s == '입고완료' %}<span class="badge-blue">입고완료</span>
+                                {% elif s == '재단완료' %}<span class="badge-orange">재단완료</span>
+                                {% elif s == '출고완료' %}<span class="badge-green">출고완료</span>
+                                {% else %}<span class="badge-gray">{{ s or '-' }}</span>{% endif %}
+                                {% if r.awaiting_reinbound %}
+                                <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded">재입고 대기</span>
+                                {% endif %}
+                            </div>
                         </td>
                         <td class="px-4 py-2.5 text-center">
                             <a href="/history?order_id={{ r.order_id }}" class="text-xs text-blue-600 hover:underline">이력 보기</a>

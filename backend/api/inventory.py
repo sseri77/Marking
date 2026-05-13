@@ -51,6 +51,13 @@ def _build_inventory_rows(svc):
         if oid:
             outbound_by_order[oid] += _safe_int(ob.get("qty"))
 
+    inbound_order_ids: set[str] = set()
+    for ib in inbounds:
+        for oid in str(ib.get("order_ids", "")).split(","):
+            oid = oid.strip()
+            if oid:
+                inbound_order_ids.add(oid)
+
     rows = []
     for o in orders:
         oid = o.get("order_id", "")
@@ -60,6 +67,7 @@ def _build_inventory_rows(svc):
         out_qty = outbound_by_order.get(oid, 0)
         remaining = max(ordered - out_qty, 0)
         on_hand = max(cut["success"] - out_qty, 0)
+        parent_order_id = o.get("parent_order_id", "")
         rows.append({
             "order_id": oid,
             "order_date": o.get("order_date", ""),
@@ -77,6 +85,8 @@ def _build_inventory_rows(svc):
             "outbound": out_qty,
             "on_hand": on_hand,
             "remaining": remaining,
+            "parent_order_id": parent_order_id,
+            "awaiting_reinbound": bool(parent_order_id) and oid not in inbound_order_ids,
         })
     return rows
 
@@ -99,6 +109,8 @@ def _filter_rows(all_rows, q: str, club: str, status: str, stock_filter: str):
         rows = [r for r in rows if r["cut_success"] < r["ordered"]]
     elif stock_filter == "completed":
         rows = [r for r in rows if r["remaining"] == 0 and r["ordered"] > 0]
+    elif stock_filter == "awaiting_reinbound":
+        rows = [r for r in rows if r["awaiting_reinbound"]]
     rows.sort(key=lambda r: r["order_date"], reverse=True)
     return rows
 
@@ -192,6 +204,7 @@ async def inventory_print(
         "on_hand": "보유 재고 있음",
         "shortage": "재단 미완료",
         "completed": "출고 완료",
+        "awaiting_reinbound": "재입고 대기",
     }
     filters = {
         "검색어": q,
