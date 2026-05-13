@@ -16,13 +16,17 @@
                     <select name="inbound_id" id="inbound-select" required class="form-input" onchange="updateInboundHint()">
                         <option value="">입고된 원단 선택</option>
                         {% for r in inbounds %}
-                        <option value="{{ r.inbound_id }}" data-available="{{ r.available_qty if r.available_qty is defined else 0 }}" {% if item and item.inbound_id == r.inbound_id %}selected{% endif %}>
+                        {% set is_current = item and item.inbound_id == r.inbound_id %}
+                        {% if (r.available_qty is defined and r.available_qty > 0) or is_current %}
+                        <option value="{{ r.inbound_id }}" data-available="{{ r.available_qty if r.available_qty is defined else 0 }}" {% if is_current %}selected{% endif %}>
                             {{ r.inbound_date }} ({{ r.day_of_week if r.day_of_week else '' }}) | {{ r.roll_no }} | {{ r.vendor }}
                             {% if r.inbound_qty %} | 입고 {{ r.inbound_qty }}장 / 잔여 {{ r.available_qty if r.available_qty is defined else r.inbound_qty }}장{% endif %}
                         </option>
+                        {% endif %}
                         {% endfor %}
                     </select>
                     <p id="inbound-hint" class="mt-1 text-xs text-gray-500 hidden">선택한 입고 잔여 <span id="inbound-available" class="font-semibold">-</span>장</p>
+                    <p class="mt-1 text-xs text-gray-400">잔여 0인 입고건은 자동으로 숨겨집니다.</p>
                 </div>
 
                 <div class="form-group">
