@@ -17,6 +17,16 @@ async def order_list(request: Request, q: str = "", page: int = 1):
     svc = get_sheets_service()
     data = svc.search(SHEET, q, ["club_name", "player_name", "player_number", "collab_name"]) if q else svc.get_all(SHEET)
     data = sorted(data, key=lambda x: x.get("order_date", ""), reverse=True)
+
+    inbound_order_ids: set[str] = set()
+    for ib in svc.get_all("ROLL_INBOUND"):
+        for oid in str(ib.get("order_ids", "")).split(","):
+            oid = oid.strip()
+            if oid:
+                inbound_order_ids.add(oid)
+    for item in data:
+        item["awaiting_inbound"] = bool(item.get("parent_order_id")) and item.get("order_id") not in inbound_order_ids
+
     paged = paginate(data, page)
     return templates.TemplateResponse(request, "orders/index.html", {"user": user, "q": q, **paged})
 

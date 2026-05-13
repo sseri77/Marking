@@ -52,6 +52,14 @@
                         <td class="px-5 py-4 text-center">
                             <span class="font-bold text-gray-800 text-base">{{ item.qty }}</span>
                             <span class="text-xs text-gray-400">장</span>
+                            {% if item.parent_order_id %}
+                            <div class="mt-1 flex flex-col items-center gap-0.5">
+                                <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded">재발주</span>
+                                {% if item.awaiting_inbound %}
+                                <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded">재입고 대기</span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                         </td>
                         <td class="px-5 py-4 text-center">
                             {% set s = item.status %}
