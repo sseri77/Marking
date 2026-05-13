@@ -6,9 +6,75 @@
 <div class="max-w-2xl">
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         {% if error %}<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{{ error }}</div>{% endif %}
-        <form action="/outbound/{% if action == 'edit' %}{{ item.outbound_id }}/edit{% else %}new{% endif %}" method="post" class="space-y-5">
+        <form action="/outbound/{% if action == 'edit' %}{{ item.outbound_id }}/edit{% else %}new{% endif %}" method="post" class="space-y-5"
+            {% if action == 'create' %}onsubmit="return validateOutboundCreate()"{% endif %}>
 
-            <!-- 재단 선택 (검색 가능한 드롭다운) -->
+            {% if action == 'create' %}
+            <!-- 재단 다중 선택 (체크박스 + 전체선택) -->
+            <div class="form-group">
+                <label class="form-label">재단 선택 <span class="text-red-500">*</span>
+                    <span class="text-xs text-gray-400 font-normal ml-1">완료 상태인 재단만 노출 · 여러 개 선택 가능</span>
+                </label>
+
+                <div class="relative mb-2">
+                    <input type="text" id="cutting_search"
+                        class="form-input"
+                        placeholder="구단·콜라보·선수명·등번호로 검색…"
+                        oninput="filterCuttingCheckboxes(this.value)">
+                </div>
+
+                <div class="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg border border-gray-100 mb-2">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" id="cutting_select_all"
+                            class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
+                            onchange="toggleSelectAllCuttings(this)">
+                        <span class="text-sm font-medium text-gray-700">전체 선택</span>
+                    </label>
+                    <span id="cutting_selected_summary" class="text-xs text-gray-500">선택: 0개 · 총 0장</span>
+                </div>
+
+                <div class="border border-gray-200 rounded-xl max-h-80 overflow-y-auto divide-y divide-gray-50" id="cutting_checkbox_list">
+                    {% for c in cuttings %}
+                    <div class="cutting-row px-3 py-2 hover:bg-blue-50 transition-colors"
+                        data-search="{{ c.club_name }} {{ c.collab_name }} {{ c.player_name }} {{ c.player_number }}">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" name="cutting_ids" value="{{ c.cutting_id }}"
+                                class="cutting-checkbox w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 flex-shrink-0"
+                                data-remaining="{{ c.remaining }}"
+                                id="cutting_cb_{{ c.cutting_id }}"
+                                onchange="onCuttingCheckboxChange(this)">
+                            <label for="cutting_cb_{{ c.cutting_id }}" class="flex-1 cursor-pointer min-w-0">
+                                <div class="text-sm font-medium text-gray-800 truncate">
+                                    {{ c.club_name }} <span class="text-blue-600">{{ c.collab_name }}</span> · {{ c.player_name }} #{{ c.player_number }}
+                                </div>
+                                <div class="text-xs text-gray-500 mt-0.5">
+                                    성공 {{ c.success_qty }}장 · 출고 {{ c.outbound_qty }}장 ·
+                                    <span class="{% if c.remaining > 0 %}text-orange-500 font-medium{% else %}text-gray-300{% endif %}">잔여 {{ c.remaining }}장</span>
+                                </div>
+                            </label>
+                            <div class="flex items-center gap-1 flex-shrink-0">
+                                <input type="number" name="qtys" min="1" max="{{ c.remaining }}" value="{{ c.remaining }}"
+                                    class="qty-input form-input w-20 py-1 px-2 text-sm" disabled
+                                    onchange="updateCuttingSelectionSummary()"
+                                    oninput="updateCuttingSelectionSummary()"
+                                    placeholder="수량">
+                                <span class="text-xs text-gray-400">장</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div id="cutting_checkbox_empty" class="hidden px-3 py-3 text-xs text-gray-400 text-center">
+                        일치하는 재단이 없습니다.
+                    </div>
+                    {% if not cuttings %}
+                    <div class="px-3 py-3 text-xs text-gray-400 text-center">
+                        출고 가능한 완료된 재단이 없습니다. <a href="/cutting" class="text-blue-600 hover:underline">재단을 완료</a>한 후 다시 시도하세요.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <!-- 재단 선택 (수정 화면: 단일 선택 드롭다운 유지) -->
             <div class="form-group">
                 <label class="form-label">재단 선택 <span class="text-red-500">*</span>
                     <span class="text-xs text-gray-400 font-normal ml-1">완료 상태인 재단만 노출</span>
@@ -32,8 +98,7 @@
                         </button>
                     </div>
                     <input type="hidden" name="cutting_id" id="cutting_id_input"
-                        value="{{ item.cutting_id if item else '' }}"
-                        {% if action == 'create' %}required{% endif %}>
+                        value="{{ item.cutting_id if item else '' }}">
 
                     <div id="cutting_dropdown"
                         class="hidden absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
@@ -98,6 +163,7 @@
                     <div id="info-number" class="text-sm font-medium text-gray-700">{{ item.player_number if item else '-' }}</div>
                 </div>
             </div>
+            {% endif %}
 
             <div class="grid grid-cols-2 gap-4">
                 <div class="form-group">
@@ -164,6 +230,7 @@
                 </div>
             </div>
 
+            {% if action == 'edit' %}
             <div class="grid grid-cols-2 gap-4">
                 <div class="form-group">
                     <label class="form-label">수량 <span class="text-red-500">*</span></label>
@@ -186,6 +253,23 @@
                     </div>
                 </div>
             </div>
+            {% else %}
+            <div class="form-group">
+                <label class="form-label">배송방법 <span class="text-red-500">*</span></label>
+                {% set dm = '택배' %}
+                <div class="flex gap-2" role="radiogroup" aria-label="배송방법">
+                    {% for opt in ['택배', '퀵', '기타'] %}
+                    <label class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border rounded-lg cursor-pointer text-sm transition-colors
+                        {% if dm == opt %}border-green-500 bg-green-50 text-green-700 font-medium{% else %}border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">
+                        <input type="radio" name="delivery_method" value="{{ opt }}" class="sr-only"
+                            {% if dm == opt %}checked{% endif %}
+                            onchange="onDeliveryMethodChange(this)">
+                        <span>{{ opt }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
 
             <div class="form-group">
                 <label class="form-label flex items-center gap-2">
@@ -217,7 +301,113 @@
 {% endblock %}
 {% block extra_scripts %}
 <script>
-// ===== 재단 검색 콤보박스 =====
+{% if action == 'create' %}
+// ===== 재단 다중 선택 (체크박스) =====
+function _cuttingRows() {
+    return Array.from(document.querySelectorAll('#cutting_checkbox_list .cutting-row'));
+}
+function _visibleCuttingRows() {
+    return _cuttingRows().filter(r => r.style.display !== 'none');
+}
+
+function filterCuttingCheckboxes(query) {
+    const q = (query || '').trim().toLowerCase();
+    let visible = 0;
+    _cuttingRows().forEach(row => {
+        const hay = (row.dataset.search || '').toLowerCase();
+        const show = !q || hay.indexOf(q) !== -1;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    const empty = document.getElementById('cutting_checkbox_empty');
+    if (empty) empty.classList.toggle('hidden', visible !== 0);
+    syncSelectAllCheckbox();
+}
+
+function toggleSelectAllCuttings(master) {
+    _visibleCuttingRows().forEach(row => {
+        const cb = row.querySelector('.cutting-checkbox');
+        if (cb && cb.checked !== master.checked) {
+            cb.checked = master.checked;
+            applyCheckboxState(cb);
+        }
+    });
+    updateCuttingSelectionSummary();
+}
+
+function applyCheckboxState(cb) {
+    const row = cb.closest('.cutting-row');
+    if (!row) return;
+    const qtyInput = row.querySelector('.qty-input');
+    if (!qtyInput) return;
+    qtyInput.disabled = !cb.checked;
+    if (cb.checked) {
+        if (!qtyInput.value || parseInt(qtyInput.value, 10) <= 0) {
+            qtyInput.value = cb.dataset.remaining || '1';
+        }
+    }
+}
+
+function onCuttingCheckboxChange(cb) {
+    applyCheckboxState(cb);
+    updateCuttingSelectionSummary();
+}
+
+function syncSelectAllCheckbox() {
+    const master = document.getElementById('cutting_select_all');
+    if (!master) return;
+    const visible = _visibleCuttingRows();
+    if (!visible.length) {
+        master.checked = false;
+        master.indeterminate = false;
+        return;
+    }
+    const checkedCount = visible.filter(r => r.querySelector('.cutting-checkbox')?.checked).length;
+    master.checked = checkedCount === visible.length;
+    master.indeterminate = checkedCount > 0 && checkedCount < visible.length;
+}
+
+function updateCuttingSelectionSummary() {
+    let count = 0;
+    let total = 0;
+    document.querySelectorAll('.cutting-checkbox:checked').forEach(cb => {
+        count++;
+        const row = cb.closest('.cutting-row');
+        const qtyInput = row ? row.querySelector('.qty-input') : null;
+        const qv = parseInt(qtyInput && qtyInput.value || '0', 10);
+        if (!isNaN(qv)) total += qv;
+    });
+    const summary = document.getElementById('cutting_selected_summary');
+    if (summary) summary.textContent = '선택: ' + count + '개 · 총 ' + total + '장';
+    syncSelectAllCheckbox();
+}
+
+function validateOutboundCreate() {
+    const checked = document.querySelectorAll('.cutting-checkbox:checked');
+    if (!checked.length) {
+        alert('재단을 1개 이상 선택해주세요.');
+        return false;
+    }
+    for (const cb of checked) {
+        const row = cb.closest('.cutting-row');
+        const qtyInput = row ? row.querySelector('.qty-input') : null;
+        const qv = parseInt(qtyInput && qtyInput.value || '0', 10);
+        const max = parseInt(cb.dataset.remaining || '0', 10);
+        if (!qv || qv <= 0) {
+            alert('선택한 재단의 수량을 1 이상으로 입력해주세요.');
+            qtyInput && qtyInput.focus();
+            return false;
+        }
+        if (max > 0 && qv > max) {
+            alert('수량이 잔여 ' + max + '장을 초과합니다.');
+            qtyInput && qtyInput.focus();
+            return false;
+        }
+    }
+    return true;
+}
+{% else %}
+// ===== 재단 검색 콤보박스 (수정 화면 단일 선택) =====
 function _cuttingOptions() {
     return Array.from(document.querySelectorAll('#cutting_list .cutting-option'));
 }
@@ -287,6 +477,7 @@ function onCuttingKey(e) {
         if (active) { e.preventDefault(); selectCutting(active); }
     }
 }
+{% endif %}
 
 // ===== 매장 검색 콤보박스 =====
 function _storeOptions() {
@@ -414,7 +605,9 @@ function onDeliveryMethodChange(radio) {
 
 document.addEventListener('click', (e) => {
     const cc = document.getElementById('cutting_combo');
-    if (cc && !cc.contains(e.target)) closeCuttingDropdown();
+    if (cc && !cc.contains(e.target)) {
+        if (typeof closeCuttingDropdown === 'function') closeCuttingDropdown();
+    }
     const sc = document.getElementById('store_combo');
     if (sc && !sc.contains(e.target)) closeStoreDropdown();
 });
@@ -422,8 +615,10 @@ document.addEventListener('click', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
     const si = document.getElementById('store_input');
     if (si) onStoreInput(si.value);
+    {% if action == 'edit' %}
     // 수정 진입 시 cutting 잔여수량 힌트 노출
-    const cid = document.getElementById('cutting_id_input').value;
+    const cidInput = document.getElementById('cutting_id_input');
+    const cid = cidInput ? cidInput.value : '';
     if (cid) {
         const opt = _cuttingOptions().find(o => o.dataset.cid === cid);
         if (opt) {
@@ -432,6 +627,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hint) hint.textContent = '재단 잔여 ' + remaining + '장까지 출고 가능';
         }
     }
+    {% else %}
+    updateCuttingSelectionSummary();
+    {% endif %}
     // 배송방법 초기 상태 반영
     onDeliveryMethodChange(document.querySelector('input[name="delivery_method"]:checked'));
 });
