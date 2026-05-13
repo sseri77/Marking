@@ -18,7 +18,7 @@
         </div>
         {% endif %}
 
-        <form method="post" action="{% if action == 'create' %}/inbound/new{% else %}/inbound/{{ item.inbound_id }}/edit{% endif %}">
+        <form method="post" action="{% if action == 'create' %}/inbound/new{% else %}/inbound/{{ item.inbound_id }}/edit{% endif %}" onsubmit="return validateInboundForm()">
             <div class="grid grid-cols-1 gap-5">
 
                 <!-- 입고일 + 요일 -->
@@ -143,10 +143,28 @@
                             value="{{ item.inbound_qty if item else '' }}"
                             min="1" required
                             class="form-input w-40 {% if is_locked %}bg-gray-50 cursor-not-allowed{% endif %}"
-                            placeholder="예: 10" {% if is_locked %}readonly{% endif %}>
+                            placeholder="예: 10" {% if is_locked %}readonly{% endif %}
+                            oninput="updateSurplusHint()">
                         <span class="text-sm text-gray-400">장</span>
                     </div>
                     <p class="text-xs text-gray-400 mt-1">동일 구성의 장이 몇 장 입고되었는지 입력하세요. (다른 구성은 별도 등록)</p>
+                </div>
+
+                <!-- 여유분 사유 (주문 초과 입고 시 필수) -->
+                <div class="form-group">
+                    <label class="form-label flex items-center gap-2">
+                        <span>여유분 사유</span>
+                        <span id="surplus_required_mark" class="text-red-500 hidden">*</span>
+                        <span id="surplus_optional_mark" class="text-xs text-gray-400 font-normal">선택 입력 — 주문 수량을 초과해 입고된 경우에만</span>
+                    </label>
+                    <div id="surplus_banner"
+                        class="hidden mb-2 px-3 py-2 rounded-lg text-xs border border-amber-200 bg-amber-50 text-amber-800">
+                        <span id="surplus_banner_text">주문 잔여를 초과하는 입고입니다. 사유를 입력해야 저장됩니다.</span>
+                    </div>
+                    <textarea name="surplus_reason" id="surplus_reason" rows="2"
+                        class="form-input {% if is_locked %}bg-gray-50 cursor-not-allowed{% endif %}"
+                        placeholder="예) 인쇄소 여유분 / 오송 / 추가 발주분 등"
+                        {% if is_locked %}readonly{% endif %}>{{ item.surplus_reason if item else '' }}</textarea>
                 </div>
 
                 <!-- 장 구성 (이 장에 인쇄된 선수) -->
@@ -172,6 +190,7 @@
                                 {% if remaining == 0 %}opacity-50{% endif %}">
                                 <div class="col-span-1">
                                     <input type="checkbox" name="order_ids_check" value="{{ o.order_id }}"
+                                        data-remaining="{{ remaining }}"
                                         {% if is_checked %}checked{% endif %}
                                         {% if is_locked %}disabled{% endif %}
                                         onchange="updateOrderIds()" class="rounded accent-blue-500">
@@ -288,6 +307,46 @@ function updateOrderIds() {
     } else {
         summary.classList.add('hidden');
     }
+
+    updateSurplusHint();
+}
+
+function _totalSelectedRemaining() {
+    return Array.from(document.querySelectorAll('input[name="order_ids_check"]:checked'))
+        .reduce((sum, cb) => sum + (parseInt(cb.dataset.remaining || '0', 10) || 0), 0);
+}
+
+function updateSurplusHint() {
+    const qty = parseInt(document.getElementById('inbound_qty').value || '0', 10) || 0;
+    const totalRemaining = _totalSelectedRemaining();
+    const overflow = qty - totalRemaining;
+    const banner = document.getElementById('surplus_banner');
+    const text = document.getElementById('surplus_banner_text');
+    const req = document.getElementById('surplus_required_mark');
+    const opt = document.getElementById('surplus_optional_mark');
+    if (!banner) return;
+    if (qty > 0 && totalRemaining > 0 && overflow > 0) {
+        banner.classList.remove('hidden');
+        text.textContent = `선택 주문 잔여 ${totalRemaining}장 대비 ${overflow}장 초과 입고입니다. 여유분 사유를 입력해주세요.`;
+        if (req) req.classList.remove('hidden');
+        if (opt) opt.classList.add('hidden');
+    } else {
+        banner.classList.add('hidden');
+        if (req) req.classList.add('hidden');
+        if (opt) opt.classList.remove('hidden');
+    }
+}
+
+function validateInboundForm() {
+    const qty = parseInt(document.getElementById('inbound_qty').value || '0', 10) || 0;
+    const totalRemaining = _totalSelectedRemaining();
+    const reason = (document.getElementById('surplus_reason').value || '').trim();
+    if (qty > 0 && totalRemaining > 0 && qty > totalRemaining && !reason) {
+        alert(`주문 잔여 ${totalRemaining}장을 초과해 입고됩니다. 여유분 사유를 입력해주세요.`);
+        document.getElementById('surplus_reason').focus();
+        return false;
+    }
+    return true;
 }
 
 function _vendorOptions() {

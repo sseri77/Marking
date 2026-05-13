@@ -42,16 +42,17 @@ def _validate_inbound_overflow(
     order_id_list: list[str],
     inbound_qty: int,
     exclude_inbound_id: str = "",
+    surplus_reason: str = "",
 ) -> str | None:
-    """주문수량 초과 입고 금지 검증.
+    """주문수량 초과 입고 검증.
 
     각 연결 주문별로 (이번 입고건 제외한 누적입고 + 이번 inbound_qty) ≤ 주문수량 이어야 한다.
+    초과분이 있어도 ``surplus_reason`` 이 입력된 경우에는 여유분/오송 등 사유로 간주해 허용한다.
     위반 시 사용자에게 보여줄 한국어 오류 메시지 문자열을 반환, 정상이면 None.
     """
     if not order_id_list or inbound_qty <= 0:
         return None
     all_orders = {o["order_id"]: o for o in svc.get_all("ORDER")}
-    # 이번 입고건을 제외한 기존 입고들로 누적 계산
     existing = [r for r in svc.get_all(SHEET)
                 if r.get("inbound_id") != exclude_inbound_id]
     totals = _compute_order_inbound_totals(existing)
@@ -68,10 +69,15 @@ def _validate_inbound_overflow(
             over.append(
                 f"[{label or oid}] 주문 {o_qty}장 / 기존 입고 {already}장 / 잔여 {remaining}장"
             )
-    if over:
-        head = f"입고수량 {inbound_qty}장이 주문 잔여수량을 초과합니다."
-        return head + "\n" + "\n".join(over)
-    return None
+    if not over:
+        return None
+    if (surplus_reason or "").strip():
+        return None
+    head = (
+        f"입고수량 {inbound_qty}장이 주문 잔여수량을 초과합니다. "
+        "여유분/오송 등 사유라면 '여유분 사유'를 입력해주세요."
+    )
+    return head + "\n" + "\n".join(over)
 
 
 def _create_shortage_reorder(
@@ -185,6 +191,7 @@ async def inbound_create(
     roll_no: str = Form(...),
     order_ids: str = Form(""),
     inbound_qty: int = Form(...),
+    surplus_reason: str = Form(""),
     manager: str = Form(...),
     memo: str = Form(""),
 ):
@@ -225,8 +232,11 @@ async def inbound_create(
     all_orders = {o["order_id"]: o for o in svc.get_all("ORDER")}
     order_qty_total = sum(int(all_orders[oid].get("qty", 0) or 0) for oid in order_id_list if oid in all_orders)
 
-    # 주문수량 초과 입고 금지 검증
-    overflow_msg = _validate_inbound_overflow(svc, order_id_list, inbound_qty)
+    surplus_reason = (surplus_reason or "").strip()
+    # 주문수량 초과 입고 검증 (사유 입력 시 허용)
+    overflow_msg = _validate_inbound_overflow(
+        svc, order_id_list, inbound_qty, surplus_reason=surplus_reason,
+    )
     if overflow_msg:
         return _render_error(overflow_msg)
 
@@ -254,6 +264,7 @@ async def inbound_create(
         "order_ids": order_ids,
         "order_qty": order_qty_total,
         "inbound_qty": inbound_qty,
+        "surplus_reason": surplus_reason,
         "manager": manager,
         "memo": memo,
         "status": status,
@@ -328,6 +339,7 @@ async def inbound_update(
     roll_no: str = Form(""),
     order_ids: str = Form(""),
     inbound_qty: int = Form(0),
+    surplus_reason: str = Form(""),
     manager: str = Form(...),
     memo: str = Form(""),
 ):
@@ -350,6 +362,8 @@ async def inbound_update(
         roll_no = before_item.get("roll_no", "")
         order_ids = before_item.get("order_ids", "")
         inbound_qty = before_qty
+        surplus_reason = before_item.get("surplus_reason", "")
+    surplus_reason = (surplus_reason or "").strip()
 
     dow = day_of_week(inbound_date)
 
@@ -373,10 +387,11 @@ async def inbound_update(
     all_orders = {o["order_id"]: o for o in svc.get_all("ORDER")}
     order_qty_total = sum(int(all_orders[oid].get("qty", 0) or 0) for oid in order_id_list if oid in all_orders)
 
-    # 주문수량 초과 입고 금지 검증 (잠금 상태 제외)
+    # 주문수량 초과 입고 검증 (잠금 상태 제외, 사유 입력 시 허용)
     if not is_locked:
         overflow_msg = _validate_inbound_overflow(
             svc, order_id_list, inbound_qty, exclude_inbound_id=inbound_id,
+            surplus_reason=surplus_reason,
         )
         if overflow_msg:
             return _render_error(overflow_msg)
@@ -387,6 +402,7 @@ async def inbound_update(
             "inbound_date": inbound_date, "day_of_week": dow, "vendor": vendor,
             "roll_no": roll_no, "order_ids": order_ids,
             "order_qty": order_qty_total, "inbound_qty": inbound_qty,
+            "surplus_reason": surplus_reason,
         })
     svc.update_row(SHEET, "inbound_id", inbound_id, update_data)
 
