@@ -13,16 +13,23 @@
 
                 <div class="form-group">
                     <label class="form-label">원단 입고 선택 *</label>
-                    <select name="inbound_id" id="inbound-select" required class="form-input" onchange="updateInboundHint()">
+                    <select name="inbound_id" id="inbound-select" required class="form-input" onchange="onInboundChange()">
                         <option value="">입고된 원단 선택</option>
                         {% for r in inbounds %}
-                        <option value="{{ r.inbound_id }}" data-available="{{ r.available_qty if r.available_qty is defined else 0 }}" {% if item and item.inbound_id == r.inbound_id %}selected{% endif %}>
+                        {% set is_current = item and item.inbound_id == r.inbound_id %}
+                        {% if (r.available_qty is defined and r.available_qty > 0) or is_current %}
+                        <option value="{{ r.inbound_id }}"
+                            data-available="{{ r.available_qty if r.available_qty is defined else 0 }}"
+                            data-order-ids="{{ r.order_ids }}"
+                            {% if is_current %}selected{% endif %}>
                             {{ r.inbound_date }} ({{ r.day_of_week if r.day_of_week else '' }}) | {{ r.roll_no }} | {{ r.vendor }}
                             {% if r.inbound_qty %} | 입고 {{ r.inbound_qty }}장 / 잔여 {{ r.available_qty if r.available_qty is defined else r.inbound_qty }}장{% endif %}
                         </option>
+                        {% endif %}
                         {% endfor %}
                     </select>
                     <p id="inbound-hint" class="mt-1 text-xs text-gray-500 hidden">선택한 입고 잔여 <span id="inbound-available" class="font-semibold">-</span>장</p>
+                    <p class="mt-1 text-xs text-gray-400">잔여 0인 입고건은 자동으로 숨겨집니다.</p>
                 </div>
 
                 <div class="form-group">
@@ -38,6 +45,7 @@
                         </option>
                         {% endfor %}
                     </select>
+                    <p id="order-hint" class="mt-1 text-xs text-gray-400">먼저 위에서 원단 입고를 선택하세요.</p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -139,6 +147,12 @@ function fillPlayerInfo() {
         document.getElementById('player-number').value = opt.dataset.number || '';
     }
 }
+function clearPlayerInfo() {
+    document.getElementById('club-name').value = '';
+    document.getElementById('collab-name').value = '';
+    document.getElementById('player-name').value = '';
+    document.getElementById('player-number').value = '';
+}
 function unlockManager() {
     const f = document.getElementById('manager_field');
     f.readOnly = false;
@@ -161,6 +175,55 @@ function updateInboundHint() {
         if (input) input.removeAttribute('max');
     }
 }
-window.addEventListener('DOMContentLoaded', updateInboundHint);
+function filterOrdersByInbound(opts) {
+    opts = opts || {};
+    const resetOnMismatch = opts.resetOnMismatch !== false;
+    const inboundSel = document.getElementById('inbound-select');
+    const orderSel = document.getElementById('order-select');
+    const hint = document.getElementById('order-hint');
+    const inboundOpt = inboundSel.options[inboundSel.selectedIndex];
+    const raw = (inboundOpt && inboundOpt.dataset.orderIds) ? inboundOpt.dataset.orderIds : '';
+    const allowed = raw.split(',').map(s => s.trim()).filter(Boolean);
+    const currentValue = orderSel.value;
+    let visible = 0;
+    let currentMatches = false;
+    Array.from(orderSel.options).forEach(o => {
+        if (!o.value) { o.hidden = false; o.disabled = false; return; }
+        const matches = allowed.length > 0 && allowed.includes(o.value);
+        const isCurrent = o.value === currentValue;
+        // 매치 안 되더라도 현재 선택은 일단 노출 (편집 모드 대응)
+        o.hidden = !(matches || isCurrent);
+        o.disabled = !(matches || isCurrent);
+        if (matches) visible++;
+        if (matches && isCurrent) currentMatches = true;
+    });
+    // 입고가 바뀌어 현재 선택이 새 입고와 무관하면 초기화
+    if (resetOnMismatch && currentValue && !currentMatches) {
+        orderSel.value = '';
+        clearPlayerInfo();
+    }
+    if (allowed.length === 0) {
+        hint.textContent = '먼저 위에서 원단 입고를 선택하세요.';
+        hint.className = 'mt-1 text-xs text-gray-400';
+        orderSel.disabled = true;
+    } else if (visible === 0) {
+        hint.textContent = '⚠ 이 입고에 연결된 활성 주문이 없습니다.';
+        hint.className = 'mt-1 text-xs text-amber-600';
+        orderSel.disabled = false;
+    } else {
+        hint.textContent = '이 입고에 연결된 주문 ' + visible + '개 표시 중';
+        hint.className = 'mt-1 text-xs text-gray-500';
+        orderSel.disabled = false;
+    }
+}
+function onInboundChange() {
+    updateInboundHint();
+    filterOrdersByInbound();
+}
+window.addEventListener('DOMContentLoaded', () => {
+    updateInboundHint();
+    // 초기 로드 시 현재 선택을 유지해야 하므로 mismatch reset 비활성화
+    filterOrdersByInbound({ resetOnMismatch: false });
+});
 </script>
 {% endblock %}
