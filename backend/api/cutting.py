@@ -133,6 +133,7 @@ def _create_defect_reorder(svc, cutting_id: str, original_order_id: str, defect_
         "order_date": today_str(),
         "club_name": original.get("club_name", ""),
         "collab_name": original.get("collab_name", ""),
+        "order_type": original.get("order_type", "") or "선수마킹",
         "player_name": original.get("player_name", ""),
         "player_number": original.get("player_number", ""),
         "qty": defect_qty,
@@ -172,10 +173,9 @@ async def cutting_new(request: Request):
     svc = get_sheets_service()
     inbounds = _annotate_inbounds_available(svc)
     orders = _orders_for_cutting_form(svc)
-    players = svc.get_all("PLAYER_MASTER")
     return templates.TemplateResponse(request, "cutting/form.html", {
         "user": user, "item": None,
-        "inbounds": inbounds, "orders": orders, "players": players,
+        "inbounds": inbounds, "orders": orders,
         "action": "create", "auto_manager": user["username"],
     })
 
@@ -215,7 +215,7 @@ async def cutting_create(
             "user": user, "item": submitted,
             "inbounds": _annotate_inbounds_available(svc),
             "orders": _orders_for_cutting_form(svc, order_id),
-            "players": svc.get_all("PLAYER_MASTER"), "action": "create",
+            "action": "create",
             "auto_manager": manager,
             "error": error_message,
         })
@@ -265,10 +265,9 @@ async def cutting_edit(request: Request, cutting_id: str):
         item["manager"] = item["worker"]
     inbounds = _annotate_inbounds_available(svc, exclude_cutting_id=cutting_id)
     orders = _orders_for_cutting_form(svc, item.get("order_id", ""))
-    players = svc.get_all("PLAYER_MASTER")
     return templates.TemplateResponse(request, "cutting/form.html", {
         "user": user, "item": item,
-        "inbounds": inbounds, "orders": orders, "players": players,
+        "inbounds": inbounds, "orders": orders,
         "action": "edit", "auto_manager": item.get("manager", user["username"]),
     })
 
@@ -313,7 +312,7 @@ async def cutting_update(
             "user": user, "item": submitted,
             "inbounds": _annotate_inbounds_available(svc, exclude_cutting_id=cutting_id),
             "orders": _orders_for_cutting_form(svc, order_id),
-            "players": svc.get_all("PLAYER_MASTER"), "action": "edit",
+            "action": "edit",
             "auto_manager": manager,
             "error": error_message,
         })

@@ -106,6 +106,7 @@ def _create_shortage_reorder(
         "order_date": today_str(),
         "club_name": original.get("club_name", ""),
         "collab_name": original.get("collab_name", ""),
+        "order_type": original.get("order_type", "") or "선수마킹",
         "player_name": original.get("player_name", ""),
         "player_number": original.get("player_number", ""),
         "qty": shortage_qty,

@@ -9,6 +9,23 @@ router = APIRouter()
 templates = Jinja2Templates(directory="frontend/templates")
 SHEET = "ORDER"
 
+ORDER_TYPES = ("선수마킹", "로고", "기타")
+
+
+def _normalize_order_type(value: str) -> str:
+    return value if value in ORDER_TYPES else "선수마킹"
+
+
+def _distinct_player_names(orders: list[dict]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for o in orders:
+        name = (o.get("player_name") or "").strip()
+        if name and name not in seen:
+            seen.add(name)
+            out.append(name)
+    return sorted(out)
+
 
 @router.get("/orders", response_class=HTMLResponse)
 async def order_list(request: Request, q: str = "", page: int = 1):
@@ -40,10 +57,11 @@ async def order_new(request: Request):
     svc = get_sheets_service()
     clubs = svc.get_all("CLUB_MASTER")
     collabs = svc.get_all("COLLAB_MASTER")
-    players = svc.get_all("PLAYER_MASTER")
+    player_names = _distinct_player_names(svc.get_all(SHEET))
     return templates.TemplateResponse(request, "orders/form.html", {
         "user": user, "item": None,
-        "clubs": clubs, "collabs": collabs, "players": players,
+        "clubs": clubs, "collabs": collabs, "player_names": player_names,
+        "order_types": ORDER_TYPES,
         "today": today_str(), "action": "create"
     })
 
@@ -52,16 +70,20 @@ async def order_new(request: Request):
 async def order_create(
     request: Request,
     order_date: str = Form(...),
-    club_name: str = Form(...),
-    collab_name: str = Form(...),
+    club_collab: str = Form(...),
+    order_type: str = Form("선수마킹"),
     player_name: str = Form(...),
-    player_number: str = Form(...),
+    player_number: str = Form(""),
     qty: int = Form(...),
     memo: str = Form(""),
 ):
     user = require_auth(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
+    club_name, _, collab_name = club_collab.partition("|")
+    order_type = _normalize_order_type(order_type)
+    if order_type != "선수마킹":
+        player_number = (player_number or "").strip()
     svc = get_sheets_service()
     new_order_id = generate_id("ORD")
     svc.append_row(SHEET, {
@@ -69,6 +91,7 @@ async def order_create(
         "order_date": order_date,
         "club_name": club_name,
         "collab_name": collab_name,
+        "order_type": order_type,
         "player_name": player_name,
         "player_number": player_number,
         "qty": qty,
@@ -95,12 +118,15 @@ async def order_edit(request: Request, order_id: str):
     item = next((i for i in items if i["order_id"] == order_id), None)
     if not item:
         raise HTTPException(status_code=404, detail="주문을 찾을 수 없습니다.")
+    if not item.get("order_type"):
+        item["order_type"] = "선수마킹"
     clubs = svc.get_all("CLUB_MASTER")
     collabs = svc.get_all("COLLAB_MASTER")
-    players = svc.get_all("PLAYER_MASTER")
+    player_names = _distinct_player_names(items)
     return templates.TemplateResponse(request, "orders/form.html", {
         "user": user, "item": item,
-        "clubs": clubs, "collabs": collabs, "players": players,
+        "clubs": clubs, "collabs": collabs, "player_names": player_names,
+        "order_types": ORDER_TYPES,
         "today": today_str(), "action": "edit"
     })
 
@@ -110,10 +136,10 @@ async def order_update(
     request: Request,
     order_id: str,
     order_date: str = Form(...),
-    club_name: str = Form(...),
-    collab_name: str = Form(...),
+    club_collab: str = Form(...),
+    order_type: str = Form("선수마킹"),
     player_name: str = Form(...),
-    player_number: str = Form(...),
+    player_number: str = Form(""),
     qty: int = Form(...),
     status: str = Form("주문완료"),
     memo: str = Form(""),
@@ -121,11 +147,16 @@ async def order_update(
     user = require_auth(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
+    club_name, _, collab_name = club_collab.partition("|")
+    order_type = _normalize_order_type(order_type)
+    if order_type != "선수마킹":
+        player_number = (player_number or "").strip()
     svc = get_sheets_service()
     before = next((o for o in svc.get_all(SHEET) if o.get("order_id") == order_id), None)
     before_qty = int((before or {}).get("qty", 0) or 0)
     svc.update_row(SHEET, "order_id", order_id, {
         "order_date": order_date, "club_name": club_name, "collab_name": collab_name,
+        "order_type": order_type,
         "player_name": player_name, "player_number": player_number,
         "qty": qty, "status": status, "memo": memo,
     })
