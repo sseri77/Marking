@@ -21,15 +21,19 @@
                         <option value="{{ r.inbound_id }}"
                             data-available="{{ r.available_qty if r.available_qty is defined else 0 }}"
                             data-order-ids="{{ r.order_ids }}"
+                            data-remaining-per-order='{{ r.remaining_per_order|tojson if r.remaining_per_order is defined else "{}" }}'
+                            data-inbound-qty="{{ r.inbound_qty }}"
                             {% if is_current %}selected{% endif %}>
                             {{ r.inbound_date }} ({{ r.day_of_week if r.day_of_week else '' }}) | {{ r.roll_no }} | {{ r.vendor }}
-                            {% if r.inbound_qty %} | 입고 {{ r.inbound_qty }}장 / 잔여 {{ r.available_qty if r.available_qty is defined else r.inbound_qty }}장{% endif %}
+                            {% if r.inbound_qty %} | 입고 {{ r.inbound_qty }}장 / 선수별 최대 잔여 {{ r.available_qty if r.available_qty is defined else r.inbound_qty }}장{% endif %}
                         </option>
                         {% endif %}
                         {% endfor %}
                     </select>
-                    <p id="inbound-hint" class="mt-1 text-xs text-gray-500 hidden">선택한 입고 잔여 <span id="inbound-available" class="font-semibold">-</span>장</p>
-                    <p class="mt-1 text-xs text-gray-400">잔여 0인 입고건은 자동으로 숨겨집니다.</p>
+                    <p id="inbound-hint" class="mt-1 text-xs text-gray-500 hidden">
+                        <span id="inbound-hint-text">선택한 입고 — 선수별 최대 잔여 <span id="inbound-available" class="font-semibold">-</span>장</span>
+                    </p>
+                    <p class="mt-1 text-xs text-gray-400">1장에 여러 선수가 인쇄될 수 있으므로 잔여는 선수별로 따로 추적됩니다. 모든 선수가 다 재단된 입고만 자동 숨김.</p>
                 </div>
 
                 <div class="form-group">
@@ -146,6 +150,7 @@ function fillPlayerInfo() {
         document.getElementById('player-name').value = opt.dataset.player || '';
         document.getElementById('player-number').value = opt.dataset.number || '';
     }
+    updateInboundHint();
 }
 function clearPlayerInfo() {
     document.getElementById('club-name').value = '';
@@ -163,17 +168,30 @@ function updateInboundHint() {
     const sel = document.getElementById('inbound-select');
     const opt = sel.options[sel.selectedIndex];
     const hint = document.getElementById('inbound-hint');
+    const hintText = document.getElementById('inbound-hint-text');
     const av = document.getElementById('inbound-available');
     const input = document.querySelector('input[name="input_qty"]');
-    if (opt && opt.value) {
-        const available = parseInt(opt.dataset.available || '0', 10);
-        av.textContent = available;
-        hint.classList.remove('hidden');
-        if (input) input.max = available;
-    } else {
+    if (!opt || !opt.value) {
         hint.classList.add('hidden');
         if (input) input.removeAttribute('max');
+        return;
     }
+    // 선수가 선택돼 있으면 그 선수의 잔여를 우선 표시
+    const orderSel = document.getElementById('order-select');
+    const orderId = orderSel ? orderSel.value : '';
+    let remaining = parseInt(opt.dataset.available || '0', 10);
+    let label = '선수별 최대 잔여';
+    if (orderId) {
+        let perOrder = {};
+        try { perOrder = JSON.parse(opt.dataset.remainingPerOrder || '{}'); } catch (e) { perOrder = {}; }
+        if (Object.prototype.hasOwnProperty.call(perOrder, orderId)) {
+            remaining = parseInt(perOrder[orderId] || '0', 10);
+            label = '선택한 선수의 잔여';
+        }
+    }
+    if (hintText) hintText.innerHTML = '선택한 입고 — ' + label + ' <span id="inbound-available" class="font-semibold">' + remaining + '</span>장';
+    hint.classList.remove('hidden');
+    if (input) input.max = remaining;
 }
 function filterOrdersByInbound(opts) {
     opts = opts || {};
