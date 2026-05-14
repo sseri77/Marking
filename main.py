@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from backend.config import get_settings
 from backend.services.sheets_service import get_sheets_service
 from backend.utils.helpers import require_auth
-from backend.api import auth, clubs, collabs, players, printers, stores, orders, inbound, cutting, outbound, search, inventory, history, reports, accounts
+from backend.api import auth, clubs, collabs, players, printers, stores, orders, inbound, cutting, outbound, search, inventory, history, reports, accounts, notices
 
 settings = get_settings()
 
@@ -23,7 +23,7 @@ app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 
 templates = Jinja2Templates(directory="frontend/templates")
 
-for router_module in [auth, clubs, collabs, players, printers, stores, orders, inbound, cutting, outbound, search, inventory, history, reports, accounts]:
+for router_module in [auth, clubs, collabs, players, printers, stores, orders, inbound, cutting, outbound, search, inventory, history, reports, accounts, notices]:
     app.include_router(router_module.router)
 
 
@@ -41,6 +41,7 @@ async def dashboard(request: Request):
     outbound_data = svc.get_all("STORE_OUTBOUND")
     clubs_data = svc.get_all("CLUB_MASTER")
     players_data = svc.get_all("PLAYER_MASTER")
+    notices_data = svc.get_all("NOTICE")
 
     stats = {
         "total_orders": len(order_data),
@@ -70,6 +71,12 @@ async def dashboard(request: Request):
     recent_outbound = sorted(outbound_data, key=lambda x: x.get("shipping_date", ""), reverse=True)[:5]
     in_progress_cuttings = [c for c in cutting_data if c.get("status") == "진행중"][:5]
 
+    pinned_notices = [n for n in notices_data if str(n.get("is_pinned", "")).upper() == "Y"]
+    other_notices = [n for n in notices_data if str(n.get("is_pinned", "")).upper() != "Y"]
+    pinned_notices.sort(key=lambda n: n.get("created_at", ""), reverse=True)
+    other_notices.sort(key=lambda n: n.get("created_at", ""), reverse=True)
+    recent_notices = (pinned_notices + other_notices)[:5]
+
     return templates.TemplateResponse(request, "dashboard.html", {
         "user": user,
         "stats": stats,
@@ -78,6 +85,7 @@ async def dashboard(request: Request):
         "recent_orders": recent_orders,
         "recent_outbound": recent_outbound,
         "in_progress_cuttings": in_progress_cuttings,
+        "recent_notices": recent_notices,
     })
 
 

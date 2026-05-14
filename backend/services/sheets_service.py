@@ -36,6 +36,8 @@ SHEET_HEADERS = {
     # 사용자 계정 (관리자 계정 정보 + 권한)
     # permissions: 페이지별 접근 권한을 JSON 문자열로 저장 (예: {"clubs": {"view":true,"write":true,"delete":false}, ...})
     "USER_MASTER": ["user_id", "username", "full_name", "role", "password_hash", "status", "permissions", "memo", "last_login_at", "created_at", "updated_at"],
+    # 관리자 공지사항 게시판
+    "NOTICE": ["notice_id", "title", "content", "author", "is_pinned", "created_at", "updated_at"],
 }
 
 # 시트 스키마가 변경된 후 기존 시트의 헤더/데이터를 신규 스키마로 변환하기 위한 필드명 매핑.
@@ -347,6 +349,10 @@ class SheetsService:
                 {"outbound_id": "OUT002", "cutting_id": "", "store_name": "홍대점", "club_name": "FC서울", "collab_name": "2024 홈킷", "player_name": "기성용", "player_number": "6", "qty": "20", "delivery_method": "퀵", "invoice_no": "", "shipping_date": "2024-05-04", "manager": "박물류", "memo": "퀵 발송", "created_at": "2024-05-04"},
             ],
             "USER_MASTER": [],
+            "NOTICE": [
+                {"notice_id": "NTC001", "title": "시스템 사용 안내", "content": "마킹키트 관리시스템에 오신 것을 환영합니다. 사용 중 문의사항은 관리자에게 연락 바랍니다.", "author": "admin", "is_pinned": "Y", "created_at": "2024-05-01 09:00:00", "updated_at": "2024-05-01 09:00:00"},
+                {"notice_id": "NTC002", "title": "주간 정기 점검 안내", "content": "매주 일요일 02:00~04:00 정기 점검이 진행됩니다. 해당 시간에는 시스템 이용이 제한될 수 있습니다.", "author": "admin", "is_pinned": "N", "created_at": "2024-05-05 10:00:00", "updated_at": "2024-05-05 10:00:00"},
+            ],
             "INVENTORY_STATUS": [
                 {"inventory_id": "INV001", "category": "원재료", "item_name": "폴리에스터", "spec": "150cm/white", "current_qty": "450", "safe_qty": "100", "unit": "m", "updated_at": "2024-05-01"},
                 {"inventory_id": "INV002", "category": "원재료", "item_name": "나일론", "spec": "140cm/black", "current_qty": "300", "safe_qty": "50", "unit": "m", "updated_at": "2024-05-03"},
