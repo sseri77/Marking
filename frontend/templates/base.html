@@ -111,6 +111,14 @@
                 <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
                 <span>통합 검색</span>
             </a>
+
+            {% if user and user.role in ['SUPER_ADMIN', 'ADMIN'] %}
+            <div class="nav-section">시스템 관리</div>
+            <a href="/accounts" class="nav-item {% if '/accounts' in request.url.path %}active{% endif %}">
+                <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.93 17.93 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
+                <span>계정 관리</span>
+            </a>
+            {% endif %}
         </nav>
 
         <!-- 사용자 정보 -->

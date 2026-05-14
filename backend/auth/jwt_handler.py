@@ -46,7 +46,42 @@ def get_user(username: str) -> Optional[dict]:
     return DEMO_USERS.get(username)
 
 
+def _find_sheet_user(username: str) -> Optional[dict]:
+    """USER_MASTER 시트에서 username 으로 사용자 조회 (지연 import 로 순환 의존 회피)."""
+    try:
+        from backend.services.sheets_service import get_sheets_service
+        svc = get_sheets_service()
+        users = svc.get_all("USER_MASTER")
+    except Exception:
+        return None
+    for u in users:
+        if str(u.get("username", "")).strip() == username:
+            return u
+    return None
+
+
 def authenticate_user(username: str, password: str) -> Optional[dict]:
+    sheet_user = _find_sheet_user(username)
+    if sheet_user:
+        if sheet_user.get("status", "활성") == "비활성":
+            return None
+        if not _check_pw(password, sheet_user.get("password_hash", "")):
+            return None
+        try:
+            from backend.services.sheets_service import get_sheets_service
+            from datetime import datetime as _dt
+            get_sheets_service().update_row(
+                "USER_MASTER", "user_id", sheet_user.get("user_id", ""),
+                {"last_login_at": _dt.now().strftime("%Y-%m-%d %H:%M:%S")},
+            )
+        except Exception:
+            pass
+        return {
+            "username": sheet_user.get("username", ""),
+            "full_name": sheet_user.get("full_name", ""),
+            "role": sheet_user.get("role", "STAFF"),
+        }
+
     user = get_user(username)
     if not user or user.get("disabled"):
         return None
