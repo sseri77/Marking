@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ item.title }} - 공지사항{% endblock %}
+{% block page_title %}공지사항{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl space-y-4">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-100">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 mb-2">
+                        {% if (item.is_pinned or '')|upper == 'Y' %}
+                        <span class="badge-orange">고정</span>
+                        {% endif %}
+                        <span class="text-xs text-gray-400 font-mono">{{ item.notice_id }}</span>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800 tracking-tight break-words">{{ item.title }}</h2>
+                    <div class="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                        <span>작성자 <strong class="text-gray-700">{{ item.author }}</strong></span>
+                        <span class="text-gray-300">|</span>
+                        <span>등록 {{ item.created_at[:16] if item.created_at else '' }}</span>
+                        {% if item.updated_at and item.updated_at != item.created_at %}
+                        <span class="text-gray-300">|</span>
+                        <span>수정 {{ item.updated_at[:16] }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="px-6 py-6">
+            <div class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{{ item.content }}</div>
+        </div>
+        <div class="px-6 py-4 bg-gray-50/60 border-t border-gray-100 flex items-center justify-between">
+            <a href="/notices" class="btn-secondary">목록으로</a>
+            {% if is_admin %}
+            <div class="flex items-center gap-2">
+                <a href="/notices/{{ item.notice_id }}/edit" class="btn-sm-secondary">수정</a>
+                <form action="/notices/{{ item.notice_id }}/delete" method="post" onsubmit="return confirm('이 공지사항을 삭제하시겠습니까?')">
+                    <button type="submit" class="btn-sm-danger">삭제</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
