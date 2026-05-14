@@ -18,13 +18,12 @@ SCOPES = [
 SHEET_HEADERS = {
     "CLUB_MASTER": ["club_id", "club_name", "status", "created_at", "updated_at"],
     "COLLAB_MASTER": ["collab_id", "club_id", "collab_name", "status", "created_at", "updated_at"],
-    "PLAYER_MASTER": ["player_id", "club_name", "collab_name", "player_name", "player_number", "status", "created_at", "updated_at"],
     # 인쇄업체 (원단 입고처)
     "PRINTER_MASTER": ["printer_id", "printer_name", "contact", "phone", "memo", "status", "created_at", "updated_at"],
     # 매장 (출고 대상)
     "STORE_MASTER": ["store_id", "store_name", "contact", "phone", "address", "memo", "status", "created_at", "updated_at"],
-    # 주문 (= 인쇄업체 발주 데이터)
-    "ORDER": ["order_id", "order_date", "club_name", "collab_name", "player_name", "player_number", "qty", "status", "memo", "created_at", "parent_order_id"],
+    # 주문 (= 인쇄업체 발주 데이터). order_type: 선수마킹 / 로고 / 기타 (구버전 데이터는 빈 값 → 선수마킹으로 간주)
+    "ORDER": ["order_id", "order_date", "club_name", "collab_name", "order_type", "player_name", "player_number", "qty", "status", "memo", "created_at", "parent_order_id"],
     # 롤 원단 입고
     "ROLL_INBOUND": ["inbound_id", "inbound_date", "day_of_week", "vendor", "roll_no", "order_ids", "order_qty", "inbound_qty", "surplus_reason", "manager", "memo", "status", "created_at"],
     # 선수별 재단
@@ -318,11 +317,6 @@ class SheetsService:
             "COLLAB_MASTER": [
                 {"collab_id": "COL001", "club_id": "CLB001", "collab_name": "2024 홈킷", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},
                 {"collab_id": "COL002", "club_id": "CLB002", "collab_name": "2024 어웨이킷", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},
-            ],
-            "PLAYER_MASTER": [
-                {"player_id": "PLY001", "club_name": "FC서울", "collab_name": "2024 홈킷", "player_name": "황의조", "player_number": "9", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},
-                {"player_id": "PLY002", "club_name": "FC서울", "collab_name": "2024 홈킷", "player_name": "기성용", "player_number": "6", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},
-                {"player_id": "PLY003", "club_name": "전북현대", "collab_name": "2024 어웨이킷", "player_name": "이동국", "player_number": "20", "status": "비활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},
             ],
             "PRINTER_MASTER": [
                 {"printer_id": "PRT001", "printer_name": "한울인쇄", "contact": "김대리", "phone": "02-1234-5678", "memo": "주거래 인쇄업체", "status": "활성", "created_at": "2024-01-01", "updated_at": "2024-01-01"},

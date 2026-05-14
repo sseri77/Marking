@@ -8,6 +8,8 @@
         <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{{ error }}</div>
         {% endif %}
 
+        {% set current_type = (item.order_type if item and item.order_type else '선수마킹') %}
+
         <form method="post" action="{% if action == 'create' %}/orders/new{% else %}/orders/{{ item.order_id }}/edit{% endif %}">
             <div class="grid grid-cols-1 gap-4">
                 <div class="form-group">
@@ -36,19 +38,39 @@
                     </select>
                 </div>
 
+                <div class="form-group">
+                    <label class="form-label">주문 유형 *</label>
+                    <div class="flex gap-2" id="order-type-group">
+                        {% for t in order_types %}
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="order_type" value="{{ t }}" class="sr-only peer"
+                                {% if current_type == t %}checked{% endif %}
+                                onchange="updateOrderTypeUI()">
+                            <span class="block text-center px-3 py-2 text-sm border border-gray-200 rounded-lg
+                                peer-checked:bg-purple-50 peer-checked:border-purple-400 peer-checked:text-purple-700 peer-checked:font-semibold
+                                hover:bg-gray-50">
+                                {{ t }}
+                            </span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div class="form-group">
-                        <label class="form-label">선수명 *</label>
-                        <input type="text" name="player_name" value="{{ item.player_name if item else '' }}"
+                        <label class="form-label" id="name-label">선수명 *</label>
+                        <input type="text" name="player_name" id="player-name-input"
+                            value="{{ item.player_name if item else '' }}"
                             list="player-list" required class="form-input" placeholder="선수명">
                         <datalist id="player-list">
-                            {% for p in players %}<option value="{{ p.player_name }}">{% endfor %}
+                            {% for name in player_names %}<option value="{{ name }}">{% endfor %}
                         </datalist>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">등번호 *</label>
-                        <input type="text" name="player_number" value="{{ item.player_number if item else '' }}"
-                            required class="form-input" placeholder="예) 7">
+                    <div class="form-group" id="player-number-group">
+                        <label class="form-label" id="number-label">등번호 *</label>
+                        <input type="text" name="player_number" id="player-number-input"
+                            value="{{ item.player_number if item else '' }}"
+                            class="form-input" placeholder="예) 7">
                     </div>
                 </div>
 
@@ -83,4 +105,38 @@
         </form>
     </div>
 </div>
+
+<script>
+function updateOrderTypeUI() {
+    const selected = document.querySelector('input[name="order_type"]:checked');
+    if (!selected) return;
+    const type = selected.value;
+    const nameLabel = document.getElementById('name-label');
+    const nameInput = document.getElementById('player-name-input');
+    const numberGroup = document.getElementById('player-number-group');
+    const numberInput = document.getElementById('player-number-input');
+    const numberLabel = document.getElementById('number-label');
+
+    if (type === '선수마킹') {
+        nameLabel.textContent = '선수명 *';
+        nameInput.placeholder = '선수명';
+        numberGroup.style.display = '';
+        numberLabel.textContent = '등번호 *';
+        numberInput.required = true;
+    } else if (type === '로고') {
+        nameLabel.textContent = '항목명 *';
+        nameInput.placeholder = '예) 팀로고, 스폰서 로고';
+        numberGroup.style.display = 'none';
+        numberInput.required = false;
+        numberInput.value = '';
+    } else {
+        nameLabel.textContent = '항목명 *';
+        nameInput.placeholder = '예) 패치, 슬리브';
+        numberGroup.style.display = '';
+        numberLabel.textContent = '번호 (선택)';
+        numberInput.required = false;
+    }
+}
+updateOrderTypeUI();
+</script>
 {% endblock %}

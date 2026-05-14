@@ -20,8 +20,8 @@ async def search_page(request: Request, q: str = "", type: str = "all"):
             results["clubs"] = svc.search("CLUB_MASTER", q, ["club_name"])
         if type in ("all", "collab"):
             results["collabs"] = svc.search("COLLAB_MASTER", q, ["collab_name"])
-        if type in ("all", "player"):
-            results["players"] = svc.search("PLAYER_MASTER", q, ["player_name", "player_number"])
+        if type in ("all", "order"):
+            results["orders"] = svc.search("ORDER", q, ["club_name", "collab_name", "player_name", "player_number"])
         if type in ("all", "inbound"):
             results["inbound"] = svc.search("MATERIAL_INBOUND", q, ["vendor", "material_name", "lot_no"])
         if type in ("all", "outbound"):
@@ -40,7 +40,7 @@ async def api_search(q: str = ""):
     results = {
         "clubs": svc.search("CLUB_MASTER", q, ["club_name"]),
         "collabs": svc.search("COLLAB_MASTER", q, ["collab_name"]),
-        "players": svc.search("PLAYER_MASTER", q, ["player_name", "player_number"]),
+        "orders": svc.search("ORDER", q, ["club_name", "collab_name", "player_name", "player_number"]),
         "inbound": svc.search("MATERIAL_INBOUND", q, ["vendor", "material_name", "lot_no"]),
         "outbound": svc.search("STORE_OUTBOUND", q, ["store_name", "club_name", "player_name"]),
     }

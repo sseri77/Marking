@@ -35,6 +35,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     {% for item in items %}
+                    {% set otype = item.order_type or '선수마킹' %}
                     <tr class="hover:bg-purple-50/30 transition-colors">
                         <td class="px-5 py-4 text-gray-500 whitespace-nowrap">{{ item.order_date }}</td>
                         <td class="px-5 py-4">
@@ -43,10 +44,16 @@
                         </td>
                         <td class="px-5 py-4">
                             <div class="flex items-center gap-2">
+                                {% if otype == '선수마킹' %}
                                 <span class="w-7 h-7 rounded-full bg-purple-100 text-purple-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
                                     {{ item.player_number }}
                                 </span>
-                                <span class="font-medium text-gray-800">{{ item.player_name }}</span>
+                                {% elif otype == '로고' %}
+                                <span class="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold text-sky-700 bg-sky-50 border border-sky-200 rounded">로고</span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold text-gray-600 bg-gray-100 border border-gray-200 rounded">기타</span>
+                                {% endif %}
+                                <span class="font-medium text-gray-800">{{ item.player_name }}{% if otype == '기타' and item.player_number %} <span class="text-gray-400">#{{ item.player_number }}</span>{% endif %}</span>
                             </div>
                         </td>
                         <td class="px-5 py-4 text-center">

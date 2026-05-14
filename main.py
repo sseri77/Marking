@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from backend.config import get_settings
 from backend.services.sheets_service import get_sheets_service
 from backend.utils.helpers import require_auth
-from backend.api import auth, clubs, collabs, players, printers, stores, orders, inbound, cutting, outbound, search, inventory, history, reports, accounts, notices
+from backend.api import auth, clubs, collabs, printers, stores, orders, inbound, cutting, outbound, search, inventory, history, reports, accounts, notices
 
 settings = get_settings()
 
@@ -23,7 +23,7 @@ app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 
 templates = Jinja2Templates(directory="frontend/templates")
 
-for router_module in [auth, clubs, collabs, players, printers, stores, orders, inbound, cutting, outbound, search, inventory, history, reports, accounts, notices]:
+for router_module in [auth, clubs, collabs, printers, stores, orders, inbound, cutting, outbound, search, inventory, history, reports, accounts, notices]:
     app.include_router(router_module.router)
 
 
@@ -40,7 +40,7 @@ async def dashboard(request: Request):
     cutting_data = svc.get_all("CUTTING_PROCESS")
     outbound_data = svc.get_all("STORE_OUTBOUND")
     clubs_data = svc.get_all("CLUB_MASTER")
-    players_data = svc.get_all("PLAYER_MASTER")
+    collabs_data = svc.get_all("COLLAB_MASTER")
     notices_data = svc.get_all("NOTICE")
 
     stats = {
@@ -50,7 +50,7 @@ async def dashboard(request: Request):
         "in_progress_cutting": len([c for c in cutting_data if c.get("status") == "진행중"]),
         "today_outbound": sum(_safe_int(o.get("qty")) for o in outbound_data if o.get("shipping_date", "") == today),
         "total_clubs": len(clubs_data),
-        "total_players": len(players_data),
+        "total_collabs": len(collabs_data),
         "total_cutting_success": sum(_safe_int(c.get("success_qty")) for c in cutting_data),
         "total_outbound_qty": sum(_safe_int(o.get("qty")) for o in outbound_data),
     }
