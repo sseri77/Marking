@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{% if action == 'create' %}계정 등록{% else %}계정 수정{% endif %}{% endblock %}
+{% block page_title %}{% if action == 'create' %}계정 등록{% else %}계정 수정{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-xl">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        {% if error %}
+        <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{{ error }}</div>
+        {% endif %}
+        <form action="/accounts/{% if action == 'edit' %}{{ item.user_id }}/edit{% else %}new{% endif %}" method="post" class="space-y-5">
+            <div class="form-group">
+                <label class="form-label">아이디 <span class="text-red-500">*</span></label>
+                <input type="text" name="username" required
+                       value="{{ item.username if item else '' }}"
+                       {% if action == 'edit' %}readonly{% endif %}
+                       class="form-input {% if action == 'edit' %}bg-gray-50 text-gray-500{% endif %}"
+                       placeholder="예: admin">
+                {% if action == 'edit' %}
+                <p class="text-xs text-gray-400 mt-1">아이디는 변경할 수 없습니다.</p>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">이름</label>
+                <input type="text" name="full_name" value="{{ item.full_name if item else '' }}" class="form-input" placeholder="예: 홍길동">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">권한 등급 <span class="text-red-500">*</span></label>
+                <select name="role" class="form-select">
+                    {% for code, label in role_choices %}
+                    <option value="{{ code }}" {% if item and item.role == code %}selected{% elif not item and code == 'STAFF' %}selected{% endif %}>{{ label }} ({{ code }})</option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-gray-400 mt-1">페이지별 세부 권한(뷰/읽기/쓰기/삭제)은 추후 별도 설정 예정입니다.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="form-group">
+                    <label class="form-label">
+                        비밀번호
+                        {% if action == 'create' %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
+                    <input type="password" name="password" {% if action == 'create' %}required{% endif %}
+                           class="form-input" placeholder="{% if action == 'edit' %}변경 시에만 입력{% else %}4자 이상{% endif %}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        비밀번호 확인
+                        {% if action == 'create' %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
+                    <input type="password" name="password_confirm" {% if action == 'create' %}required{% endif %}
+                           class="form-input" placeholder="동일하게 한번 더">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">상태</label>
+                <select name="status" class="form-select">
+                    {% for s in status_choices %}
+                    <option value="{{ s }}" {% if item and item.status == s %}selected{% elif not item and s == '활성' %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">메모</label>
+                <textarea name="memo" rows="2" class="form-input" placeholder="비고">{{ item.memo if item else '' }}</textarea>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="btn-primary flex-1">
+                    {% if action == 'create' %}등록{% else %}저장{% endif %}
+                </button>
+                <a href="/accounts" class="btn-secondary flex-1 text-center">취소</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

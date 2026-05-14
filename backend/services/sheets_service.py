@@ -33,6 +33,9 @@ SHEET_HEADERS = {
     "STORE_OUTBOUND": ["outbound_id", "cutting_id", "store_name", "club_name", "collab_name", "player_name", "player_number", "qty", "delivery_method", "invoice_no", "shipping_date", "manager", "memo", "created_at"],
     # 수량 변경 이력 로그 (주문/입고/재단의 수량 필드 변경 audit)
     "QTY_AUDIT": ["audit_id", "audit_at", "entity", "entity_id", "action", "field", "before", "after", "delta", "user", "related_order_id", "memo"],
+    # 사용자 계정 (관리자 계정 정보 + 권한)
+    # permissions: 페이지별 접근 권한을 JSON 문자열로 저장 (예: {"clubs": {"view":true,"write":true,"delete":false}, ...})
+    "USER_MASTER": ["user_id", "username", "full_name", "role", "password_hash", "status", "permissions", "memo", "last_login_at", "created_at", "updated_at"],
 }
 
 # 시트 스키마가 변경된 후 기존 시트의 헤더/데이터를 신규 스키마로 변환하기 위한 필드명 매핑.
@@ -290,6 +293,7 @@ class SheetsService:
                 {"outbound_id": "OUT001", "cutting_id": "CUT001", "store_name": "강남점", "club_name": "FC서울", "collab_name": "2024 홈킷", "player_name": "황의조", "player_number": "9", "qty": "30", "delivery_method": "택배", "invoice_no": "INV-240502", "shipping_date": "2024-05-02", "manager": "김물류", "memo": "", "created_at": "2024-05-02"},
                 {"outbound_id": "OUT002", "cutting_id": "", "store_name": "홍대점", "club_name": "FC서울", "collab_name": "2024 홈킷", "player_name": "기성용", "player_number": "6", "qty": "20", "delivery_method": "퀵", "invoice_no": "", "shipping_date": "2024-05-04", "manager": "박물류", "memo": "퀵 발송", "created_at": "2024-05-04"},
             ],
+            "USER_MASTER": [],
             "INVENTORY_STATUS": [
                 {"inventory_id": "INV001", "category": "원재료", "item_name": "폴리에스터", "spec": "150cm/white", "current_qty": "450", "safe_qty": "100", "unit": "m", "updated_at": "2024-05-01"},
                 {"inventory_id": "INV002", "category": "원재료", "item_name": "나일론", "spec": "140cm/black", "current_qty": "300", "safe_qty": "50", "unit": "m", "updated_at": "2024-05-03"},
