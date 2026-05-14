@@ -1,12 +1,14 @@
 {% extends "base.html" %}
 {% block title %}{% if action == 'create' %}재단 등록{% else %}재단 수정{% endif %}{% endblock %}
-{% block page_title %}{% if action == 'create' %}③ 선수별 재단 등록{% else %}재단 수정{% endif %}{% endblock %}
+{% block page_title %}{% if action == 'create' %}③ 재단 등록{% else %}재단 수정{% endif %}{% endblock %}
 {% block content %}
 <div class="max-w-2xl">
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         {% if error %}
         <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{{ error }}</div>
         {% endif %}
+
+        {% set has_extra = item and ((item.defect_qty|int(0)) > 0 or (item.loss_qty|int(0)) > 0) %}
 
         <form method="post" action="{% if action == 'create' %}/cutting/new{% else %}/cutting/{{ item.cutting_id }}/edit{% endif %}">
             <div class="grid grid-cols-1 gap-4">
@@ -33,17 +35,18 @@
                     <p id="inbound-hint" class="mt-1 text-xs text-gray-500 hidden">
                         <span id="inbound-hint-text">선택한 입고 — 선수별 최대 잔여 <span id="inbound-available" class="font-semibold">-</span>장</span>
                     </p>
-                    <p class="mt-1 text-xs text-gray-400">1장에 여러 선수가 인쇄될 수 있으므로 잔여는 선수별로 따로 추적됩니다. 모든 선수가 다 재단된 입고만 자동 숨김.</p>
+                    <p class="mt-1 text-xs text-gray-400">1장에 여러 선수가 인쇄될 수 있으므로 잔여는 선수별로 따로 추적됩니다.</p>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">연결 주문 *</label>
-                    <select name="order_id" id="order-select" required class="form-input" onchange="fillPlayerInfo()">
+                    <select name="order_id" id="order-select" required class="form-input" onchange="onOrderChange()">
                         <option value="">주문 선택</option>
                         {% for o in orders %}
                         <option value="{{ o.order_id }}"
                             data-club="{{ o.club_name }}" data-collab="{{ o.collab_name }}"
                             data-player="{{ o.player_name }}" data-number="{{ o.player_number }}"
+                            data-type="{{ o.order_type or '선수마킹' }}" data-qty="{{ o.qty }}"
                             {% if item and item.order_id == o.order_id %}selected{% endif %}>
                             {{ o.order_date }} | {{ o.club_name }} / {{ o.player_name }} {{ o.player_number }}번 | {{ o.qty }}장
                         </option>
@@ -52,52 +55,48 @@
                     <p id="order-hint" class="mt-1 text-xs text-gray-400">먼저 위에서 원단 입고를 선택하세요.</p>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="form-group">
-                        <label class="form-label">구단</label>
-                        <input type="text" name="club_name" id="club-name" value="{{ item.club_name if item else '' }}" required class="form-input" placeholder="자동입력">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">콜라보</label>
-                        <input type="text" name="collab_name" id="collab-name" value="{{ item.collab_name if item else '' }}" required class="form-input" placeholder="자동입력">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="form-group">
-                        <label class="form-label">선수명</label>
-                        <input type="text" name="player_name" id="player-name" value="{{ item.player_name if item else '' }}" required class="form-input" placeholder="자동입력">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">등번호</label>
-                        <input type="text" name="player_number" id="player-number" value="{{ item.player_number if item else '' }}" required class="form-input" placeholder="자동입력">
+                <div id="order-info-card" class="rounded-lg border border-purple-100 bg-purple-50/40 px-4 py-3 hidden">
+                    <div class="text-[11px] text-purple-700 font-semibold mb-1">선택된 주문</div>
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                        <span id="info-club" class="font-semibold text-gray-800">{{ item.club_name if item else '' }}</span>
+                        <span class="text-gray-300">/</span>
+                        <span id="info-collab" class="text-gray-600">{{ item.collab_name if item else '' }}</span>
+                        <span class="text-gray-300">·</span>
+                        <span id="info-player" class="text-gray-800">{{ item.player_name if item else '' }}</span>
+                        <span id="info-number-wrap" class="text-gray-500">#<span id="info-number">{{ item.player_number if item else '' }}</span></span>
+                        <span id="info-qty-wrap" class="ml-auto text-xs text-gray-500">주문 <span id="info-qty" class="font-semibold text-gray-700">-</span>장</span>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="form-group">
                         <label class="form-label">투입수량 *</label>
-                        <input type="number" name="input_qty" value="{{ item.input_qty if item else '' }}" min="1" required class="form-input">
+                        <input type="number" name="input_qty" id="input-qty" value="{{ item.input_qty if item else '' }}" min="1" required class="form-input" oninput="onInputQtyChange()">
                     </div>
                     <div class="form-group">
                         <label class="form-label">성공수량 *</label>
-                        <input type="number" name="success_qty" value="{{ item.success_qty if item else '' }}" min="0" required class="form-input">
+                        <input type="number" name="success_qty" id="success-qty" value="{{ item.success_qty if item else '' }}" min="0" required class="form-input">
+                        <p class="mt-1 text-[11px] text-gray-400">투입수량과 동일하게 자동 입력됩니다.</p>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="form-group">
-                        <label class="form-label">불량수량</label>
-                        <input type="number" name="defect_qty" value="{{ item.defect_qty if item else 0 }}" min="0" class="form-input">
+                <details id="extra-toggle" class="border border-gray-200 rounded-lg" {% if has_extra %}open{% endif %}>
+                    <summary class="cursor-pointer px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 select-none">
+                        ▸ 불량 / 손실 입력
+                    </summary>
+                    <div class="grid grid-cols-2 gap-4 p-3 border-t border-gray-100">
+                        <div class="form-group !mb-0">
+                            <label class="form-label">불량수량</label>
+                            <input type="number" name="defect_qty" id="defect-qty" value="{{ item.defect_qty if item else 0 }}" min="0" class="form-input" oninput="recomputeSuccess()">
+                        </div>
+                        <div class="form-group !mb-0">
+                            <label class="form-label">손실수량</label>
+                            <input type="number" name="loss_qty" id="loss-qty" value="{{ item.loss_qty if item else 0 }}" min="0" class="form-input" oninput="recomputeSuccess()">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">손실수량</label>
-                        <input type="number" name="loss_qty" value="{{ item.loss_qty if item else 0 }}" min="0" class="form-input">
-                    </div>
-                </div>
+                </details>
 
                 <div class="grid grid-cols-2 gap-4">
-                    <!-- 담당자 (자동입력) -->
                     <div class="form-group">
                         <label class="form-label">
                             담당자 *
@@ -113,14 +112,24 @@
                             </button>
                         </div>
                     </div>
+                    {% if action == 'edit' %}
                     <div class="form-group">
                         <label class="form-label">상태</label>
                         <select name="status" class="form-input">
                             {% for s in ['진행중', '완료', '보류', '취소'] %}
-                            <option value="{{ s }}" {% if item and item.status == s %}selected{% elif not item and s == '진행중' %}selected{% endif %}>{{ s }}</option>
+                            <option value="{{ s }}" {% if item and item.status == s %}selected{% endif %}>{{ s }}</option>
                             {% endfor %}
                         </select>
                     </div>
+                    {% else %}
+                    <div class="form-group">
+                        <label class="form-label">완료 처리</label>
+                        <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="checkbox" name="mark_done" value="1" class="rounded">
+                            <span class="text-sm text-gray-700">바로 완료로 등록</span>
+                        </label>
+                    </div>
+                    {% endif %}
                 </div>
 
                 <div class="form-group">
@@ -141,22 +150,28 @@
 {% endblock %}
 {% block extra_scripts %}
 <script>
-function fillPlayerInfo() {
+function showOrderInfo() {
     const sel = document.getElementById('order-select');
     const opt = sel.options[sel.selectedIndex];
-    if (opt && opt.value) {
-        document.getElementById('club-name').value = opt.dataset.club || '';
-        document.getElementById('collab-name').value = opt.dataset.collab || '';
-        document.getElementById('player-name').value = opt.dataset.player || '';
-        document.getElementById('player-number').value = opt.dataset.number || '';
+    const card = document.getElementById('order-info-card');
+    if (!opt || !opt.value) { card.classList.add('hidden'); return; }
+    const type = opt.dataset.type || '선수마킹';
+    document.getElementById('info-club').textContent = opt.dataset.club || '';
+    document.getElementById('info-collab').textContent = opt.dataset.collab || '';
+    document.getElementById('info-player').textContent = opt.dataset.player || '';
+    const numberWrap = document.getElementById('info-number-wrap');
+    if (type === '선수마킹' || opt.dataset.number) {
+        numberWrap.classList.remove('hidden');
+        document.getElementById('info-number').textContent = opt.dataset.number || '';
+    } else {
+        numberWrap.classList.add('hidden');
     }
-    updateInboundHint();
+    document.getElementById('info-qty').textContent = opt.dataset.qty || '-';
+    card.classList.remove('hidden');
 }
-function clearPlayerInfo() {
-    document.getElementById('club-name').value = '';
-    document.getElementById('collab-name').value = '';
-    document.getElementById('player-name').value = '';
-    document.getElementById('player-number').value = '';
+function onOrderChange() {
+    showOrderInfo();
+    updateInboundHint();
 }
 function unlockManager() {
     const f = document.getElementById('manager_field');
@@ -164,19 +179,27 @@ function unlockManager() {
     f.classList.remove('bg-gray-50');
     f.focus();
 }
+function recomputeSuccess() {
+    const input = parseInt(document.getElementById('input-qty').value || '0', 10);
+    const defect = parseInt(document.getElementById('defect-qty').value || '0', 10);
+    const loss = parseInt(document.getElementById('loss-qty').value || '0', 10);
+    const success = Math.max(input - defect - loss, 0);
+    document.getElementById('success-qty').value = success;
+}
+function onInputQtyChange() {
+    recomputeSuccess();
+}
 function updateInboundHint() {
     const sel = document.getElementById('inbound-select');
     const opt = sel.options[sel.selectedIndex];
     const hint = document.getElementById('inbound-hint');
     const hintText = document.getElementById('inbound-hint-text');
-    const av = document.getElementById('inbound-available');
     const input = document.querySelector('input[name="input_qty"]');
     if (!opt || !opt.value) {
         hint.classList.add('hidden');
         if (input) input.removeAttribute('max');
         return;
     }
-    // 선수가 선택돼 있으면 그 선수의 잔여를 우선 표시
     const orderSel = document.getElementById('order-select');
     const orderId = orderSel ? orderSel.value : '';
     let remaining = parseInt(opt.dataset.available || '0', 10);
@@ -186,7 +209,7 @@ function updateInboundHint() {
         try { perOrder = JSON.parse(opt.dataset.remainingPerOrder || '{}'); } catch (e) { perOrder = {}; }
         if (Object.prototype.hasOwnProperty.call(perOrder, orderId)) {
             remaining = parseInt(perOrder[orderId] || '0', 10);
-            label = '선택한 선수의 잔여';
+            label = '선택한 주문의 잔여';
         }
     }
     if (hintText) hintText.innerHTML = '선택한 입고 — ' + label + ' <span id="inbound-available" class="font-semibold">' + remaining + '</span>장';
@@ -209,16 +232,14 @@ function filterOrdersByInbound(opts) {
         if (!o.value) { o.hidden = false; o.disabled = false; return; }
         const matches = allowed.length > 0 && allowed.includes(o.value);
         const isCurrent = o.value === currentValue;
-        // 매치 안 되더라도 현재 선택은 일단 노출 (편집 모드 대응)
         o.hidden = !(matches || isCurrent);
         o.disabled = !(matches || isCurrent);
         if (matches) visible++;
         if (matches && isCurrent) currentMatches = true;
     });
-    // 입고가 바뀌어 현재 선택이 새 입고와 무관하면 초기화
     if (resetOnMismatch && currentValue && !currentMatches) {
         orderSel.value = '';
-        clearPlayerInfo();
+        showOrderInfo();
     }
     if (allowed.length === 0) {
         hint.textContent = '먼저 위에서 원단 입고를 선택하세요.';
@@ -240,8 +261,8 @@ function onInboundChange() {
 }
 window.addEventListener('DOMContentLoaded', () => {
     updateInboundHint();
-    // 초기 로드 시 현재 선택을 유지해야 하므로 mismatch reset 비활성화
     filterOrdersByInbound({ resetOnMismatch: false });
+    showOrderInfo();
 });
 </script>
 {% endblock %}

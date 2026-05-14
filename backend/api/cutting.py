@@ -180,20 +180,22 @@ async def cutting_new(request: Request):
     })
 
 
+def _order_info(svc, order_id: str) -> dict:
+    if not order_id:
+        return {}
+    return next((o for o in svc.get_all("ORDER") if o.get("order_id") == order_id), {}) or {}
+
+
 @router.post("/cutting/new")
 async def cutting_create(
     request: Request,
     inbound_id: str = Form(...),
     order_id: str = Form(...),
-    club_name: str = Form(...),
-    collab_name: str = Form(...),
-    player_name: str = Form(...),
-    player_number: str = Form(...),
     input_qty: int = Form(...),
     success_qty: int = Form(...),
     defect_qty: int = Form(0),
     loss_qty: int = Form(0),
-    status: str = Form("진행중"),
+    mark_done: str = Form(""),
     manager: str = Form(...),
     memo: str = Form(""),
 ):
@@ -201,10 +203,14 @@ async def cutting_create(
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
+    status = "완료" if mark_done else "진행중"
+    order = _order_info(svc, order_id)
+    club_name = order.get("club_name", "")
+    collab_name = order.get("collab_name", "")
+    player_name = order.get("player_name", "")
+    player_number = order.get("player_number", "")
     submitted = {
         "inbound_id": inbound_id, "order_id": order_id,
-        "club_name": club_name, "collab_name": collab_name,
-        "player_name": player_name, "player_number": player_number,
         "input_qty": input_qty, "success_qty": success_qty,
         "defect_qty": defect_qty, "loss_qty": loss_qty,
         "status": status, "manager": manager, "memo": memo,
@@ -278,10 +284,6 @@ async def cutting_update(
     cutting_id: str,
     inbound_id: str = Form(...),
     order_id: str = Form(...),
-    club_name: str = Form(...),
-    collab_name: str = Form(...),
-    player_name: str = Form(...),
-    player_number: str = Form(...),
     input_qty: int = Form(...),
     success_qty: int = Form(...),
     defect_qty: int = Form(0),
@@ -294,11 +296,15 @@ async def cutting_update(
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
+    order = _order_info(svc, order_id)
+    before_item = next((r for r in svc.get_all(SHEET) if r.get("cutting_id") == cutting_id), {})
+    club_name = order.get("club_name") or before_item.get("club_name", "")
+    collab_name = order.get("collab_name") or before_item.get("collab_name", "")
+    player_name = order.get("player_name") or before_item.get("player_name", "")
+    player_number = order.get("player_number") or before_item.get("player_number", "")
     submitted = {
         "cutting_id": cutting_id,
         "inbound_id": inbound_id, "order_id": order_id,
-        "club_name": club_name, "collab_name": collab_name,
-        "player_name": player_name, "player_number": player_number,
         "input_qty": input_qty, "success_qty": success_qty,
         "defect_qty": defect_qty, "loss_qty": loss_qty,
         "status": status, "manager": manager, "memo": memo,
@@ -317,8 +323,6 @@ async def cutting_update(
             "error": error_message,
         })
 
-    # 변경 전 원본 (audit 비교용)
-    before_item = next((r for r in svc.get_all(SHEET) if r.get("cutting_id") == cutting_id), {})
     before_qty = {
         "input_qty": _safe_int(before_item.get("input_qty")),
         "success_qty": _safe_int(before_item.get("success_qty")),

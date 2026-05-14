@@ -113,7 +113,7 @@ def _build_history(
         for c in sorted(ord_cuts, key=lambda x: x.get("created_at", "")):
             events.append({
                 "stage": "cutting",
-                "label": "선수별 재단",
+                "label": "재단",
                 "date": (c.get("created_at") or "")[:10],
                 "qty": _safe_int(c.get("success_qty")),
                 "memo": c.get("memo", ""),

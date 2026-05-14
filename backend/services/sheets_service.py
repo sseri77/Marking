@@ -26,7 +26,7 @@ SHEET_HEADERS = {
     "ORDER": ["order_id", "order_date", "club_name", "collab_name", "order_type", "player_name", "player_number", "qty", "status", "memo", "created_at", "parent_order_id"],
     # 롤 원단 입고
     "ROLL_INBOUND": ["inbound_id", "inbound_date", "day_of_week", "vendor", "roll_no", "order_ids", "order_qty", "inbound_qty", "surplus_reason", "manager", "memo", "status", "created_at"],
-    # 선수별 재단
+    # 재단 작업
     "CUTTING_PROCESS": ["cutting_id", "inbound_id", "order_id", "club_name", "collab_name", "player_name", "player_number", "input_qty", "success_qty", "defect_qty", "loss_qty", "status", "manager", "memo", "created_at"],
     # 출고
     "STORE_OUTBOUND": ["outbound_id", "cutting_id", "store_name", "club_name", "collab_name", "player_name", "player_number", "qty", "delivery_method", "invoice_no", "shipping_date", "manager", "memo", "created_at"],
