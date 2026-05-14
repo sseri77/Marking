@@ -52,6 +52,37 @@ SHEET_FIELD_MIGRATIONS = {
 CACHE_TTL_SECONDS = 30
 
 
+# USER_MASTER 시트 최초 생성 시 자동으로 시드할 기본 관리자 계정.
+# 비밀번호는 SECRET_KEY 기반 해시로 저장되므로 매 실행마다 동일 결과.
+DEFAULT_USER_SEED = [
+    ("USR_ADMIN_DEFAULT", "admin", "관리자", "SUPER_ADMIN", "admin1234"),
+    ("USR_MANAGER_DEFAULT", "manager", "매니저", "MANAGER", "manager1234"),
+    ("USR_STAFF_DEFAULT", "staff", "직원", "STAFF", "staff1234"),
+]
+
+
+def _build_default_user_rows() -> list[dict]:
+    """기본 시드 사용자 행(dict 리스트) 생성. 비밀번호 해시는 런타임에 계산."""
+    from backend.auth.jwt_handler import _hash_pw
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return [
+        {
+            "user_id": uid,
+            "username": uname,
+            "full_name": fname,
+            "role": role,
+            "password_hash": _hash_pw(pw),
+            "status": "활성",
+            "permissions": "",
+            "memo": "초기 시드 계정",
+            "last_login_at": "",
+            "created_at": ts,
+            "updated_at": ts,
+        }
+        for uid, uname, fname, role, pw in DEFAULT_USER_SEED
+    ]
+
+
 class SheetsService:
     def __init__(self):
         self._client: Optional[gspread.Client] = None
@@ -144,12 +175,34 @@ class SheetsService:
             headers = SHEET_HEADERS.get(sheet_name, [])
             if headers:
                 ws.append_row(headers)
+            if sheet_name == "USER_MASTER":
+                try:
+                    rows = [[str(r.get(h, "")) for h in headers] for r in _build_default_user_rows()]
+                    ws.append_rows(rows)
+                    print(f"[Sheets] USER_MASTER 기본 계정 {len(rows)}개 시드 완료")
+                except Exception as e:
+                    print(f"[Sheets] USER_MASTER 시드 실패: {e}")
             self._schema_checked.add(sheet_name)
             return ws
         if sheet_name not in self._schema_checked:
             self._ensure_sheet_schema(sheet_name, ws)
+            if sheet_name == "USER_MASTER":
+                self._seed_user_master_if_empty(ws)
             self._schema_checked.add(sheet_name)
         return ws
+
+    def _seed_user_master_if_empty(self, ws) -> None:
+        """USER_MASTER 시트에 데이터 행이 하나도 없으면 기본 계정을 시드한다."""
+        try:
+            records = ws.get_all_records()
+            if records:
+                return
+            headers = SHEET_HEADERS["USER_MASTER"]
+            rows = [[str(r.get(h, "")) for h in headers] for r in _build_default_user_rows()]
+            ws.append_rows(rows)
+            print(f"[Sheets] USER_MASTER 비어있어 기본 계정 {len(rows)}개 시드 완료")
+        except Exception as e:
+            print(f"[Sheets] USER_MASTER 자동 시드 실패: {e}")
 
     def _ensure_sheet_schema(self, sheet_name: str, sheet) -> None:
         """시트의 헤더가 현재 SHEET_HEADERS와 일치하는지 확인하고, 다르면 자동 마이그레이션한다."""
@@ -300,6 +353,8 @@ class SheetsService:
                 {"inventory_id": "INV003", "category": "가공품", "item_name": "FC서울 홈킷-황의조#9", "spec": "완제품", "current_qty": "65", "safe_qty": "20", "unit": "개", "updated_at": "2024-05-02"},
             ],
         }
+        if sheet_name == "USER_MASTER":
+            return _build_default_user_rows()
         return demo.get(sheet_name, [])
 
 
