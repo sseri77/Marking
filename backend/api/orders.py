@@ -52,8 +52,7 @@ async def order_new(request: Request):
 async def order_create(
     request: Request,
     order_date: str = Form(...),
-    club_name: str = Form(...),
-    collab_name: str = Form(...),
+    club_collab: str = Form(...),
     player_name: str = Form(...),
     player_number: str = Form(...),
     qty: int = Form(...),
@@ -62,6 +61,7 @@ async def order_create(
     user = require_auth(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
+    club_name, _, collab_name = club_collab.partition("|")
     svc = get_sheets_service()
     new_order_id = generate_id("ORD")
     svc.append_row(SHEET, {
@@ -110,8 +110,7 @@ async def order_update(
     request: Request,
     order_id: str,
     order_date: str = Form(...),
-    club_name: str = Form(...),
-    collab_name: str = Form(...),
+    club_collab: str = Form(...),
     player_name: str = Form(...),
     player_number: str = Form(...),
     qty: int = Form(...),
@@ -121,6 +120,7 @@ async def order_update(
     user = require_auth(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
+    club_name, _, collab_name = club_collab.partition("|")
     svc = get_sheets_service()
     before = next((o for o in svc.get_all(SHEET) if o.get("order_id") == order_id), None)
     before_qty = int((before or {}).get("qty", 0) or 0)

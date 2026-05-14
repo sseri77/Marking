@@ -16,21 +16,22 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">구단 *</label>
-                    <select name="club_name" id="club-select" required class="form-input">
-                        <option value="">구단 선택</option>
+                    <label class="form-label">구단 / 콜라보 *</label>
+                    <select name="club_collab" id="club-collab-select" required class="form-input">
+                        <option value="">구단 / 콜라보 선택</option>
                         {% for c in clubs %}
-                        <option value="{{ c.club_name }}" {% if item and item.club_name == c.club_name %}selected{% endif %}>{{ c.club_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">콜라보 *</label>
-                    <select name="collab_name" id="collab-select" required class="form-input">
-                        <option value="">콜라보 선택</option>
-                        {% for c in collabs %}
-                        <option value="{{ c.collab_name }}" {% if item and item.collab_name == c.collab_name %}selected{% endif %}>{{ c.collab_name }}</option>
+                        <optgroup label="{{ c.club_name }}">
+                            <option value="{{ c.club_name }}|"
+                                {% if item and item.club_name == c.club_name and not item.collab_name %}selected{% endif %}>
+                                {{ c.club_name }} (콜라보 없음)
+                            </option>
+                            {% for col in collabs %}{% if col.club_id == c.club_id %}
+                            <option value="{{ c.club_name }}|{{ col.collab_name }}"
+                                {% if item and item.club_name == c.club_name and item.collab_name == col.collab_name %}selected{% endif %}>
+                                {{ col.collab_name }}
+                            </option>
+                            {% endif %}{% endfor %}
+                        </optgroup>
                         {% endfor %}
                     </select>
                 </div>
