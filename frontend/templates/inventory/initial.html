@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}초기 재고 등록{% endblock %}
+{% block page_title %}초기 재고 등록{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
+        <div class="font-semibold mb-1">시스템 도입 전에 보유하던 재고를 일괄 등록하는 화면입니다.</div>
+        <ul class="list-disc list-inside space-y-0.5 text-[13px] text-amber-700">
+            <li>미재단 수량 → 입고만 된 상태로 잡혀 <span class="font-semibold">미재단 잔량</span>에 들어갑니다.</li>
+            <li>재단 완료 수량 → 재단까지 끝난 상태로 잡혀 <span class="font-semibold">재단됨 잔량</span>(on_hand)에 들어갑니다.</li>
+            <li>내부적으로 주문/입고/재단 행이 각각 생성되며, 메모에 <code class="px-1 bg-amber-100 rounded">[초기재고]</code> 태그가 자동으로 붙습니다.</li>
+            <li>여러 선수를 한 번에 등록할 수 있습니다. 빈 행은 자동으로 무시됩니다.</li>
+        </ul>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-700">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/inventory/initial" class="space-y-4">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="form-group">
+                <label class="form-label">담당자</label>
+                <input type="text" name="manager" value="{{ auto_manager }}" class="form-input">
+            </div>
+            <div class="form-group md:col-span-2">
+                <label class="form-label">공통 메모 (선택)</label>
+                <input type="text" name="memo" value="{{ common_memo if common_memo else '' }}" placeholder="예) 2024년 12월말 실사 결과" class="form-input">
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+                <span class="font-semibold text-gray-700 text-sm">선수별 초기 재고</span>
+                <button type="button" onclick="addRow()" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
+                    + 행 추가
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50/60 text-gray-500">
+                        <tr>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider w-10">#</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">구단 / 콜라보 *</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">선수명 *</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider w-24">등번호</th>
+                            <th class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider w-32" title="입고만 되고 아직 재단 안 한 수량">미재단</th>
+                            <th class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider w-32" title="재단까지 완료된 완성품 수량">재단 완료</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">행 메모</th>
+                            <th class="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider w-12"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows-body" class="divide-y divide-gray-50">
+                        {% set rows = submitted_rows if submitted_rows else [{}, {}, {}] %}
+                        {% for r in rows %}
+                        <tr class="row-item">
+                            <td class="px-3 py-2 text-center text-gray-400 row-index">{{ loop.index }}</td>
+                            <td class="px-3 py-2">
+                                <select name="club_collab[{{ loop.index0 }}]" class="form-input">
+                                    <option value="">선택</option>
+                                    {% for c in clubs %}
+                                    <optgroup label="{{ c.club_name }}">
+                                        <option value="{{ c.club_name }}|"
+                                            {% if r.club_name == c.club_name and not r.collab_name %}selected{% endif %}>
+                                            {{ c.club_name }} (콜라보 없음)
+                                        </option>
+                                        {% for col in collabs %}{% if col.club_id == c.club_id %}
+                                        <option value="{{ c.club_name }}|{{ col.collab_name }}"
+                                            {% if r.club_name == c.club_name and r.collab_name == col.collab_name %}selected{% endif %}>
+                                            {{ col.collab_name }}
+                                        </option>
+                                        {% endif %}{% endfor %}
+                                    </optgroup>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td class="px-3 py-2">
+                                <input type="text" name="player_name[{{ loop.index0 }}]" value="{{ r.player_name if r.player_name else '' }}" placeholder="선수명" class="form-input">
+                            </td>
+                            <td class="px-3 py-2">
+                                <input type="text" name="player_number[{{ loop.index0 }}]" value="{{ r.player_number if r.player_number else '' }}" placeholder="7" class="form-input">
+                            </td>
+                            <td class="px-3 py-2">
+                                <input type="number" name="uncut_qty[{{ loop.index0 }}]" value="{{ r.uncut_qty if r.uncut_qty else '' }}" min="0" placeholder="0" class="form-input text-right">
+                            </td>
+                            <td class="px-3 py-2">
+                                <input type="number" name="cut_qty[{{ loop.index0 }}]" value="{{ r.cut_qty if r.cut_qty else '' }}" min="0" placeholder="0" class="form-input text-right">
+                            </td>
+                            <td class="px-3 py-2">
+                                <input type="text" name="row_memo[{{ loop.index0 }}]" value="{{ r.row_memo if r.row_memo else '' }}" placeholder="(선택)" class="form-input">
+                            </td>
+                            <td class="px-3 py-2 text-center">
+                                <button type="button" onclick="removeRow(this)" class="text-gray-400 hover:text-red-500" title="행 삭제">×</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button type="submit" class="btn-primary px-6 py-2 text-sm rounded-lg">초기 재고 등록</button>
+            <a href="/inventory" class="btn-secondary px-6 py-2 text-sm rounded-lg">취소</a>
+        </div>
+    </form>
+</div>
+
+<template id="row-template">
+<tr class="row-item">
+    <td class="px-3 py-2 text-center text-gray-400 row-index"></td>
+    <td class="px-3 py-2">
+        <select name="club_collab[__IDX__]" class="form-input">
+            <option value="">선택</option>
+            {% for c in clubs %}
+            <optgroup label="{{ c.club_name }}">
+                <option value="{{ c.club_name }}|">{{ c.club_name }} (콜라보 없음)</option>
+                {% for col in collabs %}{% if col.club_id == c.club_id %}
+                <option value="{{ c.club_name }}|{{ col.collab_name }}">{{ col.collab_name }}</option>
+                {% endif %}{% endfor %}
+            </optgroup>
+            {% endfor %}
+        </select>
+    </td>
+    <td class="px-3 py-2"><input type="text" name="player_name[__IDX__]" placeholder="선수명" class="form-input"></td>
+    <td class="px-3 py-2"><input type="text" name="player_number[__IDX__]" placeholder="7" class="form-input"></td>
+    <td class="px-3 py-2"><input type="number" name="uncut_qty[__IDX__]" min="0" placeholder="0" class="form-input text-right"></td>
+    <td class="px-3 py-2"><input type="number" name="cut_qty[__IDX__]" min="0" placeholder="0" class="form-input text-right"></td>
+    <td class="px-3 py-2"><input type="text" name="row_memo[__IDX__]" placeholder="(선택)" class="form-input"></td>
+    <td class="px-3 py-2 text-center"><button type="button" onclick="removeRow(this)" class="text-gray-400 hover:text-red-500" title="행 삭제">×</button></td>
+</tr>
+</template>
+
+<script>
+function reindexRows() {
+    const rows = document.querySelectorAll('#rows-body .row-item');
+    rows.forEach((tr, i) => {
+        tr.querySelector('.row-index').textContent = (i + 1);
+        tr.querySelectorAll('[name]').forEach(el => {
+            el.name = el.name.replace(/\[[^\]]*\]$/, `[${i}]`);
+        });
+    });
+}
+
+function addRow() {
+    const tpl = document.getElementById('row-template');
+    const body = document.getElementById('rows-body');
+    const idx = body.querySelectorAll('.row-item').length;
+    const html = tpl.innerHTML.replace(/__IDX__/g, idx);
+    const wrap = document.createElement('tbody');
+    wrap.innerHTML = html;
+    body.appendChild(wrap.firstElementChild);
+    reindexRows();
+}
+
+function removeRow(btn) {
+    const tr = btn.closest('tr');
+    if (document.querySelectorAll('#rows-body .row-item').length <= 1) {
+        tr.querySelectorAll('input, select').forEach(el => el.value = '');
+        return;
+    }
+    tr.remove();
+    reindexRows();
+}
+</script>
+{% endblock %}
