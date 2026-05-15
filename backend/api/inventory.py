@@ -187,6 +187,57 @@ async def inventory_status(
     })
 
 
+@router.get("/inventory/stock", response_class=HTMLResponse)
+async def inventory_stock_only(
+    request: Request,
+    q: str = "",
+    club: str = "",
+):
+    """잔량(stock_total > 0)이 남아있는 항목만 간소한 표로 보여주는 전용 화면."""
+    user = require_auth(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    svc = get_sheets_service()
+    all_rows = _build_inventory_rows(svc)
+    rows = [r for r in all_rows if r["stock_total"] > 0]
+    if q:
+        ql = q.lower()
+        rows = [r for r in rows if ql in r["club_name"].lower()
+                or ql in r["collab_name"].lower()
+                or ql in r["player_name"].lower()
+                or ql in str(r["player_number"]).lower()]
+    if club:
+        rows = [r for r in rows if r["club_name"] == club]
+    rows.sort(key=lambda r: (-r["stock_total"], r["order_date"]))
+
+    summary = {
+        "total_stock_waiting_cut": sum(r["stock_waiting_cut"] for r in rows),
+        "total_on_hand": sum(r["on_hand"] for r in rows),
+        "total_stock_total": sum(r["stock_total"] for r in rows),
+        "row_count": len(rows),
+    }
+
+    club_totals = defaultdict(lambda: {"stock_waiting_cut": 0, "on_hand": 0, "stock_total": 0})
+    for r in rows:
+        ct = club_totals[r["club_name"] or "(미지정)"]
+        ct["stock_waiting_cut"] += r["stock_waiting_cut"]
+        ct["on_hand"] += r["on_hand"]
+        ct["stock_total"] += r["stock_total"]
+    club_summary = sorted(club_totals.items(), key=lambda kv: kv[1]["stock_total"], reverse=True)
+
+    all_clubs = sorted({r["club_name"] for r in all_rows if r["club_name"] and r["stock_total"] > 0})
+
+    return templates.TemplateResponse(request, "inventory/stock.html", {
+        "user": user,
+        "rows": rows,
+        "summary": summary,
+        "club_summary": club_summary,
+        "all_clubs": all_clubs,
+        "q": q,
+        "club": club,
+    })
+
+
 @router.get("/inventory/print", response_class=HTMLResponse)
 async def inventory_print(
     request: Request,
