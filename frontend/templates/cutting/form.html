@@ -32,7 +32,7 @@
                             data-roll="{{ p.roll_no }}"
                             data-vendor="{{ p.vendor }}"
                             {% if (p.inbound_id ~ '|' ~ p.order_id) == selected_key %}selected{% endif %}>
-                            {{ p.inbound_date }} | {{ p.club_name }} / {{ p.player_name }}{% if p.player_number %} #{{ p.player_number }}{% endif %} | 잔여 {{ p.remaining }}장 ({{ p.roll_no }}{% if p.vendor %} · {{ p.vendor }}{% endif %})
+                            {{ p.club_name }}{% if p.collab_name %} / {{ p.collab_name }}{% endif %} · {{ p.player_name }}{% if p.player_number %} #{{ p.player_number }}{% endif %} | 잔여 {{ p.remaining }}장
                         </option>
                         {% endfor %}
                     </select>
