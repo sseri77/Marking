@@ -10,7 +10,7 @@
 - 재단 완료 수량 → CUTTING_PROCESS.success_qty (on_hand)에 잡힘
 - 각 행은 메모 `[초기재고]` 태그로 추적 가능
 """
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from backend.services.sheets_service import get_sheets_service
@@ -24,6 +24,16 @@ templates = Jinja2Templates(directory="frontend/templates")
 
 INITIAL_TAG = "[초기재고]"
 INITIAL_VENDOR = "초기재고"
+
+
+def _require_super_admin(request: Request):
+    """초기재고 등록은 SUPER_ADMIN 전용. (None, redirect) 또는 (user, None) 반환."""
+    user = require_auth(request)
+    if not user:
+        return None, RedirectResponse(url="/login", status_code=303)
+    if user.get("role") != "SUPER_ADMIN":
+        raise HTTPException(status_code=403, detail="초기 재고 등록은 최고관리자만 접근할 수 있습니다.")
+    return user, None
 
 
 def _safe_int(value, default: int = 0) -> int:
@@ -52,9 +62,9 @@ def _next_init_roll_no(existing_rolls: list[dict], seq_offset: int, date_str: st
 
 @router.get("/inventory/initial", response_class=HTMLResponse)
 async def initial_inventory_form(request: Request):
-    user = require_auth(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
+    user, redirect = _require_super_admin(request)
+    if redirect:
+        return redirect
     svc = get_sheets_service()
     clubs = svc.get_all("CLUB_MASTER")
     collabs = svc.get_all("COLLAB_MASTER")
@@ -69,9 +79,9 @@ async def initial_inventory_form(request: Request):
 
 @router.post("/inventory/initial")
 async def initial_inventory_submit(request: Request):
-    user = require_auth(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
+    user, redirect = _require_super_admin(request)
+    if redirect:
+        return redirect
 
     form = await request.form()
     svc = get_sheets_service()

@@ -97,12 +97,14 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
                     인쇄용 출력
                 </a>
+                {% if user and user.role == 'SUPER_ADMIN' %}
                 <a href="/inventory/initial"
                    class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-lg transition"
-                   title="시스템 도입 전 보유 재고를 일괄 등록">
+                   title="시스템 도입 전 보유 재고를 일괄 등록 (최고관리자 전용)">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     초기재고 등록
                 </a>
+                {% endif %}
                 <span class="ml-auto text-xs text-gray-400">총 <strong class="text-gray-700">{{ rows|length }}</strong>건</span>
             </div>
         </form>
