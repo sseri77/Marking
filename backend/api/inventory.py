@@ -133,7 +133,7 @@ async def inventory_status(
     q: str = "",
     club: str = "",
     status: str = "",
-    stock_filter: str = "",
+    stock_filter: str = "stock_total",
 ):
     user = require_auth(request)
     if not user:
@@ -244,7 +244,7 @@ async def inventory_print(
     q: str = "",
     club: str = "",
     status: str = "",
-    stock_filter: str = "",
+    stock_filter: str = "stock_total",
 ):
     user = require_auth(request)
     if not user:

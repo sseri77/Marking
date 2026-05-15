@@ -79,8 +79,8 @@
             <div>
                 <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">재고 필터</label>
                 <select name="stock_filter" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-blue-400">
-                    <option value="" {% if not stock_filter %}selected{% endif %}>전체</option>
-                    <option value="stock_total" {% if stock_filter == 'stock_total' %}selected{% endif %}>재고 잔량 있음</option>
+                    <option value="stock_total" {% if stock_filter == 'stock_total' %}selected{% endif %}>재고 잔량 있음 (기본)</option>
+                    <option value="all" {% if stock_filter == 'all' %}selected{% endif %}>전체 (잔량 없음 포함)</option>
                     <option value="on_hand" {% if stock_filter == 'on_hand' %}selected{% endif %}>재단된 잔량 있음</option>
                     <option value="shortage" {% if stock_filter == 'shortage' %}selected{% endif %}>재단 미완료</option>
                     <option value="completed" {% if stock_filter == 'completed' %}selected{% endif %}>출고 완료</option>
