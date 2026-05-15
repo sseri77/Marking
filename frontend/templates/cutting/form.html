@@ -9,54 +9,41 @@
         {% endif %}
 
         {% set has_extra = item and ((item.defect_qty|int(0)) > 0 or (item.loss_qty|int(0)) > 0) %}
+        {% set selected_key = (item.inbound_id ~ '|' ~ item.order_id) if item and item.inbound_id and item.order_id else '' %}
 
         <form method="post" action="{% if action == 'create' %}/cutting/new{% else %}/cutting/{{ item.cutting_id }}/edit{% endif %}">
             <div class="grid grid-cols-1 gap-4">
 
                 <div class="form-group">
-                    <label class="form-label">원단 입고 선택 *</label>
-                    <select name="inbound_id" id="inbound-select" required class="form-input" onchange="onInboundChange()">
-                        <option value="">입고된 원단 선택</option>
-                        {% for r in inbounds %}
-                        {% set is_current = item and item.inbound_id == r.inbound_id %}
-                        {% if (r.available_qty is defined and r.available_qty > 0) or is_current %}
-                        <option value="{{ r.inbound_id }}"
-                            data-available="{{ r.available_qty if r.available_qty is defined else 0 }}"
-                            data-order-ids="{{ r.order_ids }}"
-                            data-remaining-per-order='{{ r.remaining_per_order|tojson if r.remaining_per_order is defined else "{}" }}'
-                            data-inbound-qty="{{ r.inbound_qty }}"
-                            {% if is_current %}selected{% endif %}>
-                            {{ r.inbound_date }} ({{ r.day_of_week if r.day_of_week else '' }}) | {{ r.roll_no }} | {{ r.vendor }}
-                            {% if r.inbound_qty %} | 입고 {{ r.inbound_qty }}장 / 선수별 최대 잔여 {{ r.available_qty if r.available_qty is defined else r.inbound_qty }}장{% endif %}
-                        </option>
-                        {% endif %}
-                        {% endfor %}
-                    </select>
-                    <p id="inbound-hint" class="mt-1 text-xs text-gray-500 hidden">
-                        <span id="inbound-hint-text">선택한 입고 — 선수별 최대 잔여 <span id="inbound-available" class="font-semibold">-</span>장</span>
-                    </p>
-                    <p class="mt-1 text-xs text-gray-400">1장에 여러 선수가 인쇄될 수 있으므로 잔여는 선수별로 따로 추적됩니다.</p>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">연결 주문 *</label>
-                    <select name="order_id" id="order-select" required class="form-input" onchange="onOrderChange()">
-                        <option value="">주문 선택</option>
-                        {% for o in orders %}
-                        <option value="{{ o.order_id }}"
-                            data-club="{{ o.club_name }}" data-collab="{{ o.collab_name }}"
-                            data-player="{{ o.player_name }}" data-number="{{ o.player_number }}"
-                            data-type="{{ o.order_type or '선수마킹' }}" data-qty="{{ o.qty }}"
-                            {% if item and item.order_id == o.order_id %}selected{% endif %}>
-                            {{ o.order_date }} | {{ o.club_name }} / {{ o.player_name }} {{ o.player_number }}번 | {{ o.qty }}장
+                    <label class="form-label">원단 입고 / 연결 주문 *</label>
+                    <select id="pair-select" required class="form-input" onchange="onPairChange()">
+                        <option value="">입고 × 주문 선택 (잔여 있는 항목만 표시)</option>
+                        {% for p in pairs %}
+                        <option value="{{ p.inbound_id }}|{{ p.order_id }}"
+                            data-inbound-id="{{ p.inbound_id }}"
+                            data-order-id="{{ p.order_id }}"
+                            data-club="{{ p.club_name }}"
+                            data-collab="{{ p.collab_name }}"
+                            data-player="{{ p.player_name }}"
+                            data-number="{{ p.player_number }}"
+                            data-type="{{ p.order_type }}"
+                            data-order-qty="{{ p.order_qty }}"
+                            data-remaining="{{ p.remaining }}"
+                            data-roll="{{ p.roll_no }}"
+                            data-vendor="{{ p.vendor }}"
+                            {% if (p.inbound_id ~ '|' ~ p.order_id) == selected_key %}selected{% endif %}>
+                            {{ p.inbound_date }} | {{ p.club_name }} / {{ p.player_name }}{% if p.player_number %} #{{ p.player_number }}{% endif %} | 잔여 {{ p.remaining }}장 ({{ p.roll_no }}{% if p.vendor %} · {{ p.vendor }}{% endif %})
                         </option>
                         {% endfor %}
                     </select>
-                    <p id="order-hint" class="mt-1 text-xs text-gray-400">먼저 위에서 원단 입고를 선택하세요.</p>
+                    <p class="mt-1 text-xs text-gray-400">한 입고에 여러 선수가 묶여 있으면 선수마다 별도 항목으로 표시됩니다.</p>
                 </div>
 
-                <div id="order-info-card" class="rounded-lg border border-purple-100 bg-purple-50/40 px-4 py-3 hidden">
-                    <div class="text-[11px] text-purple-700 font-semibold mb-1">선택된 주문</div>
+                <input type="hidden" name="inbound_id" id="inbound-id-hidden" value="{{ item.inbound_id if item else '' }}">
+                <input type="hidden" name="order_id" id="order-id-hidden" value="{{ item.order_id if item else '' }}">
+
+                <div id="pair-info-card" class="rounded-lg border border-purple-100 bg-purple-50/40 px-4 py-3 hidden">
+                    <div class="text-[11px] text-purple-700 font-semibold mb-1">선택된 입고 × 주문</div>
                     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                         <span id="info-club" class="font-semibold text-gray-800">{{ item.club_name if item else '' }}</span>
                         <span class="text-gray-300">/</span>
@@ -64,7 +51,7 @@
                         <span class="text-gray-300">·</span>
                         <span id="info-player" class="text-gray-800">{{ item.player_name if item else '' }}</span>
                         <span id="info-number-wrap" class="text-gray-500">#<span id="info-number">{{ item.player_number if item else '' }}</span></span>
-                        <span id="info-qty-wrap" class="ml-auto text-xs text-gray-500">주문 <span id="info-qty" class="font-semibold text-gray-700">-</span>장</span>
+                        <span class="ml-auto text-xs text-gray-500">잔여 <span id="info-remaining" class="font-semibold text-gray-700">-</span>장 / 주문 <span id="info-qty" class="font-semibold text-gray-700">-</span>장</span>
                     </div>
                 </div>
 
@@ -150,28 +137,37 @@
 {% endblock %}
 {% block extra_scripts %}
 <script>
-function showOrderInfo() {
-    const sel = document.getElementById('order-select');
+function onPairChange() {
+    const sel = document.getElementById('pair-select');
     const opt = sel.options[sel.selectedIndex];
-    const card = document.getElementById('order-info-card');
-    if (!opt || !opt.value) { card.classList.add('hidden'); return; }
-    const type = opt.dataset.type || '선수마킹';
+    const inboundHidden = document.getElementById('inbound-id-hidden');
+    const orderHidden = document.getElementById('order-id-hidden');
+    const card = document.getElementById('pair-info-card');
+    const inputQty = document.getElementById('input-qty');
+    if (!opt || !opt.value) {
+        inboundHidden.value = '';
+        orderHidden.value = '';
+        card.classList.add('hidden');
+        if (inputQty) inputQty.removeAttribute('max');
+        return;
+    }
+    inboundHidden.value = opt.dataset.inboundId || '';
+    orderHidden.value = opt.dataset.orderId || '';
     document.getElementById('info-club').textContent = opt.dataset.club || '';
     document.getElementById('info-collab').textContent = opt.dataset.collab || '';
     document.getElementById('info-player').textContent = opt.dataset.player || '';
     const numberWrap = document.getElementById('info-number-wrap');
+    const type = opt.dataset.type || '선수마킹';
     if (type === '선수마킹' || opt.dataset.number) {
         numberWrap.classList.remove('hidden');
         document.getElementById('info-number').textContent = opt.dataset.number || '';
     } else {
         numberWrap.classList.add('hidden');
     }
-    document.getElementById('info-qty').textContent = opt.dataset.qty || '-';
+    document.getElementById('info-remaining').textContent = opt.dataset.remaining || '-';
+    document.getElementById('info-qty').textContent = opt.dataset.orderQty || '-';
     card.classList.remove('hidden');
-}
-function onOrderChange() {
-    showOrderInfo();
-    updateInboundHint();
+    if (inputQty) inputQty.max = opt.dataset.remaining || '';
 }
 function unlockManager() {
     const f = document.getElementById('manager_field');
@@ -189,80 +185,8 @@ function recomputeSuccess() {
 function onInputQtyChange() {
     recomputeSuccess();
 }
-function updateInboundHint() {
-    const sel = document.getElementById('inbound-select');
-    const opt = sel.options[sel.selectedIndex];
-    const hint = document.getElementById('inbound-hint');
-    const hintText = document.getElementById('inbound-hint-text');
-    const input = document.querySelector('input[name="input_qty"]');
-    if (!opt || !opt.value) {
-        hint.classList.add('hidden');
-        if (input) input.removeAttribute('max');
-        return;
-    }
-    const orderSel = document.getElementById('order-select');
-    const orderId = orderSel ? orderSel.value : '';
-    let remaining = parseInt(opt.dataset.available || '0', 10);
-    let label = '선수별 최대 잔여';
-    if (orderId) {
-        let perOrder = {};
-        try { perOrder = JSON.parse(opt.dataset.remainingPerOrder || '{}'); } catch (e) { perOrder = {}; }
-        if (Object.prototype.hasOwnProperty.call(perOrder, orderId)) {
-            remaining = parseInt(perOrder[orderId] || '0', 10);
-            label = '선택한 주문의 잔여';
-        }
-    }
-    if (hintText) hintText.innerHTML = '선택한 입고 — ' + label + ' <span id="inbound-available" class="font-semibold">' + remaining + '</span>장';
-    hint.classList.remove('hidden');
-    if (input) input.max = remaining;
-}
-function filterOrdersByInbound(opts) {
-    opts = opts || {};
-    const resetOnMismatch = opts.resetOnMismatch !== false;
-    const inboundSel = document.getElementById('inbound-select');
-    const orderSel = document.getElementById('order-select');
-    const hint = document.getElementById('order-hint');
-    const inboundOpt = inboundSel.options[inboundSel.selectedIndex];
-    const raw = (inboundOpt && inboundOpt.dataset.orderIds) ? inboundOpt.dataset.orderIds : '';
-    const allowed = raw.split(',').map(s => s.trim()).filter(Boolean);
-    const currentValue = orderSel.value;
-    let visible = 0;
-    let currentMatches = false;
-    Array.from(orderSel.options).forEach(o => {
-        if (!o.value) { o.hidden = false; o.disabled = false; return; }
-        const matches = allowed.length > 0 && allowed.includes(o.value);
-        const isCurrent = o.value === currentValue;
-        o.hidden = !(matches || isCurrent);
-        o.disabled = !(matches || isCurrent);
-        if (matches) visible++;
-        if (matches && isCurrent) currentMatches = true;
-    });
-    if (resetOnMismatch && currentValue && !currentMatches) {
-        orderSel.value = '';
-        showOrderInfo();
-    }
-    if (allowed.length === 0) {
-        hint.textContent = '먼저 위에서 원단 입고를 선택하세요.';
-        hint.className = 'mt-1 text-xs text-gray-400';
-        orderSel.disabled = true;
-    } else if (visible === 0) {
-        hint.textContent = '⚠ 이 입고에 연결된 활성 주문이 없습니다.';
-        hint.className = 'mt-1 text-xs text-amber-600';
-        orderSel.disabled = false;
-    } else {
-        hint.textContent = '이 입고에 연결된 주문 ' + visible + '개 표시 중';
-        hint.className = 'mt-1 text-xs text-gray-500';
-        orderSel.disabled = false;
-    }
-}
-function onInboundChange() {
-    updateInboundHint();
-    filterOrdersByInbound();
-}
 window.addEventListener('DOMContentLoaded', () => {
-    updateInboundHint();
-    filterOrdersByInbound({ resetOnMismatch: false });
-    showOrderInfo();
+    onPairChange();
 });
 </script>
 {% endblock %}

@@ -49,38 +49,53 @@ def _available_input_qty(svc, inbound_id: str, order_id: str, exclude_cutting_id
     return _safe_int(inbound.get("inbound_qty")) - used
 
 
-def _annotate_inbounds_available(svc, exclude_cutting_id: str = "") -> list:
-    """입고 목록에 선수별 잔여 정보를 붙인 새 리스트를 반환한다(원본 캐시 보호).
+def _inbound_order_pairs(
+    svc,
+    exclude_cutting_id: str = "",
+    current_inbound_id: str = "",
+    current_order_id: str = "",
+) -> list:
+    """재단 폼 통합 셀렉트용 (입고 × 주문) 페어 목록.
 
-    - ``available_qty``: 묶인 선수들 중 가장 많이 남아있는 선수의 잔여(대표값).
-    - ``remaining_per_order``: ``{order_id: 잔여수량}`` 매핑. 폼에서 선수 선택 시 사용.
+    잔여가 있는 (입고, 주문) 조합만 반환한다. 수정 모드의 현재 선택은 잔여/취소 여부와
+    무관하게 항상 포함된다. 한 입고에 여러 선수가 묶여 있으면 각 선수마다 별도 페어가
+    만들어진다.
     """
     used = _used_input_by_inbound_order(svc, exclude_cutting_id)
-    annotated = []
+    orders_by_id = {o.get("order_id"): o for o in svc.get_all("ORDER")}
+    pairs = []
     for ib in svc.get_all("ROLL_INBOUND"):
         inb_id = ib.get("inbound_id", "")
         total = _safe_int(ib.get("inbound_qty"))
         order_ids = [o.strip() for o in str(ib.get("order_ids", "")).split(",") if o.strip()]
-        per_order = {oid: max(total - used.get((inb_id, oid), 0), 0) for oid in order_ids}
-        available = max(per_order.values()) if per_order else total
-        annotated.append({
-            **ib,
-            "available_qty": max(available, 0),
-            "remaining_per_order": per_order,
-        })
-    return annotated
-
-
-def _orders_for_cutting_form(svc, current_order_id: str = "") -> list:
-    """재단 폼 ‘연결 주문’ 드롭다운용 목록.
-    - 취소된 주문은 제외
-    - 수정 모드에서는 현재 주문은 상태와 무관하게 항상 포함
-    """
-    excluded = {"취소"}
-    return [
-        o for o in svc.get_all("ORDER")
-        if o.get("status") not in excluded or o.get("order_id") == current_order_id
-    ]
+        for oid in order_ids:
+            order = orders_by_id.get(oid)
+            if not order:
+                continue
+            is_current = (inb_id == current_inbound_id and oid == current_order_id)
+            if order.get("status") == "취소" and not is_current:
+                continue
+            remaining = max(total - used.get((inb_id, oid), 0), 0)
+            if remaining <= 0 and not is_current:
+                continue
+            pairs.append({
+                "inbound_id": inb_id,
+                "order_id": oid,
+                "inbound_date": ib.get("inbound_date", ""),
+                "day_of_week": ib.get("day_of_week", ""),
+                "vendor": ib.get("vendor", ""),
+                "roll_no": ib.get("roll_no", ""),
+                "club_name": order.get("club_name", ""),
+                "collab_name": order.get("collab_name", ""),
+                "player_name": order.get("player_name", ""),
+                "player_number": order.get("player_number", ""),
+                "order_type": order.get("order_type", "") or "선수마킹",
+                "order_qty": _safe_int(order.get("qty")),
+                "remaining": remaining,
+                "is_current": is_current,
+            })
+    pairs.sort(key=lambda p: (p["inbound_date"], p["club_name"], p["player_name"]), reverse=True)
+    return pairs
 
 
 def _validate_cutting_qty(
@@ -171,11 +186,10 @@ async def cutting_new(request: Request):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     svc = get_sheets_service()
-    inbounds = _annotate_inbounds_available(svc)
-    orders = _orders_for_cutting_form(svc)
+    pairs = _inbound_order_pairs(svc)
     return templates.TemplateResponse(request, "cutting/form.html", {
         "user": user, "item": None,
-        "inbounds": inbounds, "orders": orders,
+        "pairs": pairs,
         "action": "create", "auto_manager": user["username"],
     })
 
@@ -219,8 +233,7 @@ async def cutting_create(
     if error_message:
         return templates.TemplateResponse(request, "cutting/form.html", {
             "user": user, "item": submitted,
-            "inbounds": _annotate_inbounds_available(svc),
-            "orders": _orders_for_cutting_form(svc, order_id),
+            "pairs": _inbound_order_pairs(svc, current_inbound_id=inbound_id, current_order_id=order_id),
             "action": "create",
             "auto_manager": manager,
             "error": error_message,
@@ -269,11 +282,15 @@ async def cutting_edit(request: Request, cutting_id: str):
     # 기존 데이터에 worker 필드가 있으면 manager로 마이그레이션
     if not item.get("manager") and item.get("worker"):
         item["manager"] = item["worker"]
-    inbounds = _annotate_inbounds_available(svc, exclude_cutting_id=cutting_id)
-    orders = _orders_for_cutting_form(svc, item.get("order_id", ""))
+    pairs = _inbound_order_pairs(
+        svc,
+        exclude_cutting_id=cutting_id,
+        current_inbound_id=item.get("inbound_id", ""),
+        current_order_id=item.get("order_id", ""),
+    )
     return templates.TemplateResponse(request, "cutting/form.html", {
         "user": user, "item": item,
-        "inbounds": inbounds, "orders": orders,
+        "pairs": pairs,
         "action": "edit", "auto_manager": item.get("manager", user["username"]),
     })
 
@@ -316,8 +333,12 @@ async def cutting_update(
     if error_message:
         return templates.TemplateResponse(request, "cutting/form.html", {
             "user": user, "item": submitted,
-            "inbounds": _annotate_inbounds_available(svc, exclude_cutting_id=cutting_id),
-            "orders": _orders_for_cutting_form(svc, order_id),
+            "pairs": _inbound_order_pairs(
+                svc,
+                exclude_cutting_id=cutting_id,
+                current_inbound_id=inbound_id,
+                current_order_id=order_id,
+            ),
             "action": "edit",
             "auto_manager": manager,
             "error": error_message,
